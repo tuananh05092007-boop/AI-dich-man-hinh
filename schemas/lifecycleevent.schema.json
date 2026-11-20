@@ -1,0 +1,64 @@
+{
+  "$defs": {
+    "LifecycleState": {
+      "enum": [
+        "NO_TEXT",
+        "TEXT_DETECTED",
+        "TEXT_STABILIZING",
+        "TRANSLATION_PENDING",
+        "TRANSLATING",
+        "DISPLAYING",
+        "TEXT_CHANGED",
+        "CLEAR_PENDING",
+        "CLEARED",
+        "ERROR"
+      ],
+      "title": "LifecycleState",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "subtitle_id": {
+      "minLength": 1,
+      "title": "Subtitle Id",
+      "type": "string"
+    },
+    "generation_id": {
+      "minimum": 1,
+      "title": "Generation Id",
+      "type": "integer"
+    },
+    "previous_state": {
+      "$ref": "#/$defs/LifecycleState"
+    },
+    "current_state": {
+      "$ref": "#/$defs/LifecycleState"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "reason": {
+      "default": "",
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "subtitle_id",
+    "generation_id",
+    "previous_state",
+    "current_state",
+    "timestamp"
+  ],
+  "title": "LifecycleEvent",
+  "type": "object"
+}

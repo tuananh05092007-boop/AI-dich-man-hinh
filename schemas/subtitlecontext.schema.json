@@ -1,0 +1,60 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "game_id": {
+      "minLength": 1,
+      "title": "Game Id",
+      "type": "string"
+    },
+    "speaker": {
+      "default": "unknown",
+      "title": "Speaker",
+      "type": "string"
+    },
+    "conversation_history": {
+      "items": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "title": "Conversation History",
+      "type": "array"
+    },
+    "glossary": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Glossary",
+      "type": "object"
+    },
+    "translation_style": {
+      "default": "context_adaptive",
+      "title": "Translation Style",
+      "type": "string"
+    },
+    "source_language": {
+      "const": "en",
+      "default": "en",
+      "title": "Source Language",
+      "type": "string"
+    },
+    "target_language": {
+      "const": "vi",
+      "default": "vi",
+      "title": "Target Language",
+      "type": "string"
+    }
+  },
+  "required": [
+    "game_id"
+  ],
+  "title": "SubtitleContext",
+  "type": "object"
+}

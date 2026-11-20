@@ -1,0 +1,117 @@
+{
+  "$defs": {
+    "SubtitleContext": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "0.1",
+          "default": "0.1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "game_id": {
+          "minLength": 1,
+          "title": "Game Id",
+          "type": "string"
+        },
+        "speaker": {
+          "default": "unknown",
+          "title": "Speaker",
+          "type": "string"
+        },
+        "conversation_history": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Conversation History",
+          "type": "array"
+        },
+        "glossary": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Glossary",
+          "type": "object"
+        },
+        "translation_style": {
+          "default": "context_adaptive",
+          "title": "Translation Style",
+          "type": "string"
+        },
+        "source_language": {
+          "const": "en",
+          "default": "en",
+          "title": "Source Language",
+          "type": "string"
+        },
+        "target_language": {
+          "const": "vi",
+          "default": "vi",
+          "title": "Target Language",
+          "type": "string"
+        }
+      },
+      "required": [
+        "game_id"
+      ],
+      "title": "SubtitleContext",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "subtitle_id": {
+      "minLength": 1,
+      "title": "Subtitle Id",
+      "type": "string"
+    },
+    "generation_id": {
+      "minimum": 1,
+      "title": "Generation Id",
+      "type": "integer"
+    },
+    "source_text": {
+      "minLength": 1,
+      "title": "Source Text",
+      "type": "string"
+    },
+    "context": {
+      "$ref": "#/$defs/SubtitleContext"
+    },
+    "requested_at": {
+      "format": "date-time",
+      "title": "Requested At",
+      "type": "string"
+    },
+    "deadline_ms": {
+      "exclusiveMinimum": 0,
+      "title": "Deadline Ms",
+      "type": "integer"
+    },
+    "idempotency_key": {
+      "minLength": 1,
+      "title": "Idempotency Key",
+      "type": "string"
+    }
+  },
+  "required": [
+    "subtitle_id",
+    "generation_id",
+    "source_text",
+    "context",
+    "requested_at",
+    "deadline_ms",
+    "idempotency_key"
+  ],
+  "title": "TranslationRequest",
+  "type": "object"
+}

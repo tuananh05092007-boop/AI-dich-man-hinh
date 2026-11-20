@@ -1,0 +1,101 @@
+{
+  "$defs": {
+    "TranslationEngine": {
+      "enum": [
+        "nllb",
+        "openai"
+      ],
+      "title": "TranslationEngine",
+      "type": "string"
+    },
+    "TranslationStatus": {
+      "enum": [
+        "completed",
+        "failed",
+        "skipped"
+      ],
+      "title": "TranslationStatus",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "subtitle_id": {
+      "minLength": 1,
+      "title": "Subtitle Id",
+      "type": "string"
+    },
+    "generation_id": {
+      "minimum": 1,
+      "title": "Generation Id",
+      "type": "integer"
+    },
+    "source_text": {
+      "minLength": 1,
+      "title": "Source Text",
+      "type": "string"
+    },
+    "translated_text": {
+      "default": "",
+      "title": "Translated Text",
+      "type": "string"
+    },
+    "engine": {
+      "$ref": "#/$defs/TranslationEngine"
+    },
+    "status": {
+      "$ref": "#/$defs/TranslationStatus"
+    },
+    "latency_ms": {
+      "minimum": 0,
+      "title": "Latency Ms",
+      "type": "number"
+    },
+    "completed_at": {
+      "format": "date-time",
+      "title": "Completed At",
+      "type": "string"
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Code"
+    },
+    "error_message": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Message"
+    }
+  },
+  "required": [
+    "subtitle_id",
+    "generation_id",
+    "source_text",
+    "engine",
+    "status",
+    "latency_ms",
+    "completed_at"
+  ],
+  "title": "TranslationResult",
+  "type": "object"
+}

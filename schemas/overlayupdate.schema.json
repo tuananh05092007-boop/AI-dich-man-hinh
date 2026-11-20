@@ -1,0 +1,93 @@
+{
+  "$defs": {
+    "BoundingBox": {
+      "additionalProperties": false,
+      "properties": {
+        "x1": {
+          "minimum": 0,
+          "title": "X1",
+          "type": "integer"
+        },
+        "y1": {
+          "minimum": 0,
+          "title": "Y1",
+          "type": "integer"
+        },
+        "x2": {
+          "exclusiveMinimum": 0,
+          "title": "X2",
+          "type": "integer"
+        },
+        "y2": {
+          "exclusiveMinimum": 0,
+          "title": "Y2",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "subtitle_id": {
+      "minLength": 1,
+      "title": "Subtitle Id",
+      "type": "string"
+    },
+    "generation_id": {
+      "minimum": 1,
+      "title": "Generation Id",
+      "type": "integer"
+    },
+    "source_text": {
+      "title": "Source Text",
+      "type": "string"
+    },
+    "translated_text": {
+      "title": "Translated Text",
+      "type": "string"
+    },
+    "bbox": {
+      "$ref": "#/$defs/BoundingBox"
+    },
+    "display_mode": {
+      "enum": [
+        "vietnamese_only",
+        "bilingual",
+        "side_by_side",
+        "floating_box"
+      ],
+      "title": "Display Mode",
+      "type": "string"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "subtitle_id",
+    "generation_id",
+    "source_text",
+    "translated_text",
+    "bbox",
+    "display_mode",
+    "expires_at"
+  ],
+  "title": "OverlayUpdate",
+  "type": "object"
+}
