@@ -22,6 +22,7 @@ packages = ["src/ai_screen_translator"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = "-ra"
 
 [tool.ruff]
