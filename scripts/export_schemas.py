@@ -24,7 +24,7 @@ for name in MODEL_NAMES:
     model = getattr(models, name)
     schema = model.model_json_schema()
     (OUTPUT / f"{name.lower()}.schema.json").write_text(
-        json.dumps(schema, ensure_ascii=False, indent=2) + "\\n",
+        json.dumps(schema, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
 print(f"Exported {len(MODEL_NAMES)} JSON Schemas to {OUTPUT}/")
