@@ -1,0 +1,329 @@
+{
+  "$defs": {
+    "BoundingBox": {
+      "additionalProperties": false,
+      "description": "Axis-aligned rectangle in *monitor-relative* physical pixels.\n\nOrigin is the top-left pixel of the monitor named by ``monitor_id``; x grows right and y\ngrows down. The box is half-open: it covers pixels ``x1 <= x < x2`` and ``y1 <= y < y2``,\nso ``width = x2 - x1``. Coordinates are never virtual-desktop coordinates.",
+      "properties": {
+        "monitor_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Monitor Id",
+          "type": "string"
+        },
+        "x1": {
+          "minimum": 0,
+          "title": "X1",
+          "type": "integer"
+        },
+        "x2": {
+          "minimum": 0,
+          "title": "X2",
+          "type": "integer"
+        },
+        "y1": {
+          "minimum": 0,
+          "title": "Y1",
+          "type": "integer"
+        },
+        "y2": {
+          "minimum": 0,
+          "title": "Y2",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "monitor_id",
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "ContentType": {
+      "enum": [
+        "subtitle",
+        "dialogue",
+        "choice",
+        "quest",
+        "item_description",
+        "ui",
+        "unknown"
+      ],
+      "title": "ContentType",
+      "type": "string"
+    },
+    "GameDisplayMode": {
+      "enum": [
+        "windowed",
+        "borderless_windowed",
+        "fullscreen_exclusive",
+        "unknown"
+      ],
+      "title": "GameDisplayMode",
+      "type": "string"
+    },
+    "OCRPreprocessingConfig": {
+      "additionalProperties": false,
+      "description": "Per-game OCR preprocessing (Adaptive Thresholding / CLAHE are approved techniques).",
+      "properties": {
+        "adaptive_threshold": {
+          "default": false,
+          "title": "Adaptive Threshold",
+          "type": "boolean"
+        },
+        "clahe": {
+          "default": false,
+          "title": "Clahe",
+          "type": "boolean"
+        },
+        "invert": {
+          "default": false,
+          "title": "Invert",
+          "type": "boolean"
+        },
+        "min_confidence": {
+          "default": 0.5,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Min Confidence",
+          "type": "number"
+        },
+        "profile": {
+          "default": "default",
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Profile",
+          "type": "string"
+        },
+        "scale_factor": {
+          "default": 1.0,
+          "exclusiveMinimum": 0.0,
+          "maximum": 8.0,
+          "title": "Scale Factor",
+          "type": "number"
+        }
+      },
+      "title": "OCRPreprocessingConfig",
+      "type": "object"
+    },
+    "OverlayDisplayMode": {
+      "enum": [
+        "vietnamese_only",
+        "bilingual",
+        "side_by_side",
+        "floating_box"
+      ],
+      "title": "OverlayDisplayMode",
+      "type": "string"
+    },
+    "Resolution": {
+      "additionalProperties": false,
+      "properties": {
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "title": "Resolution",
+      "type": "object"
+    },
+    "RoiConfig": {
+      "additionalProperties": false,
+      "description": "A configured region of interest, in monitor-relative pixels.",
+      "properties": {
+        "bbox": {
+          "$ref": "#/$defs/BoundingBox"
+        },
+        "content_type": {
+          "$ref": "#/$defs/ContentType",
+          "default": "subtitle"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "region_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Region Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "region_id",
+        "bbox"
+      ],
+      "title": "RoiConfig",
+      "type": "object"
+    },
+    "TranslationStyle": {
+      "enum": [
+        "context_adaptive",
+        "literal",
+        "natural"
+      ],
+      "title": "TranslationStyle",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Per-game configuration. Never contains secrets (extra fields are rejected).",
+  "properties": {
+    "character_names": {
+      "items": {
+        "maxLength": 200,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 256,
+      "title": "Character Names",
+      "type": "array"
+    },
+    "display_mode": {
+      "$ref": "#/$defs/GameDisplayMode",
+      "default": "unknown"
+    },
+    "display_name": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Display Name"
+    },
+    "executable_name": {
+      "anyOf": [
+        {
+          "maxLength": 260,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Executable Name"
+    },
+    "game_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Game Id",
+      "type": "string"
+    },
+    "glossary": {
+      "additionalProperties": {
+        "maxLength": 200,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxProperties": 1024,
+      "propertyNames": {
+        "maxLength": 200,
+        "minLength": 1
+      },
+      "title": "Glossary",
+      "type": "object"
+    },
+    "glossary_path": {
+      "anyOf": [
+        {
+          "maxLength": 260,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Glossary Path"
+    },
+    "monitor_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Monitor Id"
+    },
+    "ocr": {
+      "$ref": "#/$defs/OCRPreprocessingConfig"
+    },
+    "overlay_display_mode": {
+      "$ref": "#/$defs/OverlayDisplayMode",
+      "default": "bilingual"
+    },
+    "reference_resolution": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Resolution"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "roi": {
+      "items": {
+        "$ref": "#/$defs/RoiConfig"
+      },
+      "maxItems": 32,
+      "title": "Roi",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_language": {
+      "const": "en",
+      "default": "en",
+      "title": "Source Language",
+      "type": "string"
+    },
+    "target_language": {
+      "const": "vi",
+      "default": "vi",
+      "title": "Target Language",
+      "type": "string"
+    },
+    "translation_style": {
+      "$ref": "#/$defs/TranslationStyle",
+      "default": "context_adaptive"
+    }
+  },
+  "required": [
+    "game_id"
+  ],
+  "title": "GameProfile",
+  "type": "object"
+}

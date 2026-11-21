@@ -1,0 +1,173 @@
+{
+  "$defs": {
+    "BoundingBox": {
+      "additionalProperties": false,
+      "description": "Axis-aligned rectangle in *monitor-relative* physical pixels.\n\nOrigin is the top-left pixel of the monitor named by ``monitor_id``; x grows right and y\ngrows down. The box is half-open: it covers pixels ``x1 <= x < x2`` and ``y1 <= y < y2``,\nso ``width = x2 - x1``. Coordinates are never virtual-desktop coordinates.",
+      "properties": {
+        "monitor_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Monitor Id",
+          "type": "string"
+        },
+        "x1": {
+          "minimum": 0,
+          "title": "X1",
+          "type": "integer"
+        },
+        "x2": {
+          "minimum": 0,
+          "title": "X2",
+          "type": "integer"
+        },
+        "y1": {
+          "minimum": 0,
+          "title": "Y1",
+          "type": "integer"
+        },
+        "y2": {
+          "minimum": 0,
+          "title": "Y2",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "monitor_id",
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "RecognitionStatus": {
+      "enum": [
+        "accepted",
+        "low_confidence",
+        "rejected",
+        "empty"
+      ],
+      "title": "RecognitionStatus",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "OCR output for one region of one frame. Natural key: ``(frame_id, region_id)``.\n\n``subtitle_id`` and ``generation_id`` are assigned by the tracker *after* OCR, so they are\nboth ``None`` on raw OCR output and both set once tracked. ``source_text`` is the normalized\ntext; ``raw_text`` keeps the unnormalized text when it differs. ``EMPTY`` status reports a\nregion with no recognized text (input to clear debouncing) and requires empty text.",
+  "properties": {
+    "bbox": {
+      "$ref": "#/$defs/BoundingBox"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "frame_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "generation_id": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generation Id"
+    },
+    "language": {
+      "const": "en",
+      "default": "en",
+      "title": "Language",
+      "type": "string"
+    },
+    "preprocessing_profile": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Preprocessing Profile"
+    },
+    "raw_text": {
+      "anyOf": [
+        {
+          "maxLength": 8192,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Raw Text"
+    },
+    "recognition_status": {
+      "$ref": "#/$defs/RecognitionStatus"
+    },
+    "region_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Region Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_text": {
+      "maxLength": 8192,
+      "title": "Source Text",
+      "type": "string"
+    },
+    "subtitle_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Subtitle Id"
+    },
+    "timestamp": {
+      "description": "Timezone-aware UTC ISO-8601 timestamp (serialized with 'Z').",
+      "format": "date-time",
+      "pattern": "(Z|\\+00:00)$",
+      "title": "Timestamp",
+      "type": "string"
+    }
+  },
+  "required": [
+    "frame_id",
+    "region_id",
+    "source_text",
+    "confidence",
+    "bbox",
+    "timestamp",
+    "recognition_status"
+  ],
+  "title": "OCRObservation",
+  "type": "object"
+}

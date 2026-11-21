@@ -1,0 +1,163 @@
+{
+  "$defs": {
+    "MetricUnit": {
+      "enum": [
+        "ms",
+        "percent",
+        "bytes"
+      ],
+      "title": "MetricUnit",
+      "type": "string"
+    },
+    "PerformanceMetricName": {
+      "enum": [
+        "capture_latency",
+        "ocr_latency",
+        "tracking_latency",
+        "translation_latency",
+        "render_latency",
+        "end_to_end_latency",
+        "cpu_usage",
+        "ram_usage",
+        "gpu_usage",
+        "vram_usage"
+      ],
+      "title": "PerformanceMetricName",
+      "type": "string"
+    },
+    "PipelineComponent": {
+      "enum": [
+        "capture",
+        "preprocessing",
+        "region_detection",
+        "ocr",
+        "normalization",
+        "tracking",
+        "context",
+        "translation",
+        "translation_memory",
+        "overlay",
+        "storage",
+        "app"
+      ],
+      "title": "PipelineComponent",
+      "type": "string"
+    },
+    "TranslationEngine": {
+      "enum": [
+        "nllb",
+        "openai",
+        "translation_memory"
+      ],
+      "title": "TranslationEngine",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One measured performance value. Latencies come from a monotonic clock.",
+  "properties": {
+    "component": {
+      "$ref": "#/$defs/PipelineComponent"
+    },
+    "engine": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TranslationEngine"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "frame_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Frame Id"
+    },
+    "generation_id": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generation Id"
+    },
+    "metric": {
+      "$ref": "#/$defs/PerformanceMetricName"
+    },
+    "region_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Region Id"
+    },
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "subtitle_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Subtitle Id"
+    },
+    "timestamp": {
+      "description": "Timezone-aware UTC ISO-8601 timestamp (serialized with 'Z').",
+      "format": "date-time",
+      "pattern": "(Z|\\+00:00)$",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "unit": {
+      "$ref": "#/$defs/MetricUnit"
+    },
+    "value": {
+      "minimum": 0.0,
+      "title": "Value",
+      "type": "number"
+    }
+  },
+  "required": [
+    "metric",
+    "value",
+    "unit",
+    "timestamp",
+    "component"
+  ],
+  "title": "PerformanceMetric",
+  "type": "object"
+}

@@ -1,0 +1,238 @@
+{
+  "$defs": {
+    "ErrorCode": {
+      "enum": [
+        "timeout",
+        "network_error",
+        "auth_error",
+        "rate_limited",
+        "model_unavailable",
+        "invalid_request",
+        "invalid_response",
+        "resource_exhausted",
+        "engine_error",
+        "internal_error"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "ErrorInfo": {
+      "additionalProperties": false,
+      "description": "Structured, secret-free error description.\n\n``message`` is passed through :func:`redact_secrets`. No tracebacks, request headers or\nfree-form dictionaries are carried.",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "component": {
+          "$ref": "#/$defs/PipelineComponent"
+        },
+        "error_type": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Type"
+        },
+        "message": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "status_code": {
+          "anyOf": [
+            {
+              "maximum": 599,
+              "minimum": 100,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Code"
+        }
+      },
+      "required": [
+        "code",
+        "component",
+        "message"
+      ],
+      "title": "ErrorInfo",
+      "type": "object"
+    },
+    "PipelineComponent": {
+      "enum": [
+        "capture",
+        "preprocessing",
+        "region_detection",
+        "ocr",
+        "normalization",
+        "tracking",
+        "context",
+        "translation",
+        "translation_memory",
+        "overlay",
+        "storage",
+        "app"
+      ],
+      "title": "PipelineComponent",
+      "type": "string"
+    },
+    "SkipReason": {
+      "enum": [
+        "stale_generation",
+        "cancelled",
+        "duplicate_request"
+      ],
+      "title": "SkipReason",
+      "type": "string"
+    },
+    "TranslationEngine": {
+      "enum": [
+        "nllb",
+        "openai",
+        "translation_memory"
+      ],
+      "title": "TranslationEngine",
+      "type": "string"
+    },
+    "TranslationStatus": {
+      "enum": [
+        "completed",
+        "failed",
+        "skipped"
+      ],
+      "title": "TranslationStatus",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Outcome of a translation request.\n\nStatus semantics (enforced):\n\n* ``completed``: ``translated_text`` is meaningful, ``engine`` is the engine that actually\n  produced it, and neither ``error`` nor ``skip_reason`` is set.\n* ``failed``: ``error`` is set; no ``translated_text`` and no ``skip_reason``.\n* ``skipped``: translation was deliberately not performed and is not an error;\n  ``skip_reason`` is set; no ``translated_text`` and no ``error``. A skipped result never\n  changes lifecycle state by itself.",
+  "properties": {
+    "completed_at": {
+      "description": "Timezone-aware UTC ISO-8601 timestamp (serialized with 'Z').",
+      "format": "date-time",
+      "pattern": "(Z|\\+00:00)$",
+      "title": "Completed At",
+      "type": "string"
+    },
+    "engine": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TranslationEngine"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "generation_id": {
+      "minimum": 1,
+      "title": "Generation Id",
+      "type": "integer"
+    },
+    "latency_ms": {
+      "description": "Measured with a monotonic clock.",
+      "minimum": 0.0,
+      "title": "Latency Ms",
+      "type": "number"
+    },
+    "model_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Model Id"
+    },
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "skip_reason": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SkipReason"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_text": {
+      "maxLength": 8192,
+      "minLength": 1,
+      "title": "Source Text",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/TranslationStatus"
+    },
+    "subtitle_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Subtitle Id",
+      "type": "string"
+    },
+    "translated_text": {
+      "anyOf": [
+        {
+          "maxLength": 8192,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Translated Text"
+    }
+  },
+  "required": [
+    "subtitle_id",
+    "generation_id",
+    "source_text",
+    "status",
+    "latency_ms",
+    "completed_at"
+  ],
+  "title": "TranslationResult",
+  "type": "object"
+}

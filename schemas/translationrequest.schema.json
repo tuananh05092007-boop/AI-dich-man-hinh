@@ -1,0 +1,208 @@
+{
+  "$defs": {
+    "ConversationMessage": {
+      "additionalProperties": false,
+      "description": "One previous dialogue line in the sliding context window.",
+      "properties": {
+        "content": {
+          "maxLength": 8192,
+          "minLength": 1,
+          "title": "Content",
+          "type": "string"
+        },
+        "speaker": {
+          "default": "unknown",
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Speaker",
+          "type": "string"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "description": "Timezone-aware UTC ISO-8601 timestamp (serialized with 'Z').",
+              "format": "date-time",
+              "pattern": "(Z|\\+00:00)$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timestamp"
+        },
+        "translation": {
+          "anyOf": [
+            {
+              "maxLength": 8192,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Translation"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "ConversationMessage",
+      "type": "object"
+    },
+    "SubtitleContext": {
+      "additionalProperties": false,
+      "description": "Context supplied with a translation request (bounded; no RAG machinery).",
+      "properties": {
+        "conversation_history": {
+          "items": {
+            "$ref": "#/$defs/ConversationMessage"
+          },
+          "maxItems": 32,
+          "title": "Conversation History",
+          "type": "array"
+        },
+        "game_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Game Id",
+          "type": "string"
+        },
+        "glossary": {
+          "additionalProperties": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxProperties": 256,
+          "propertyNames": {
+            "maxLength": 200,
+            "minLength": 1
+          },
+          "title": "Glossary",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": "0.1",
+          "default": "0.1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_language": {
+          "const": "en",
+          "default": "en",
+          "title": "Source Language",
+          "type": "string"
+        },
+        "speaker": {
+          "default": "unknown",
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Speaker",
+          "type": "string"
+        },
+        "target_language": {
+          "const": "vi",
+          "default": "vi",
+          "title": "Target Language",
+          "type": "string"
+        },
+        "translation_style": {
+          "$ref": "#/$defs/TranslationStyle",
+          "default": "context_adaptive"
+        }
+      },
+      "required": [
+        "game_id"
+      ],
+      "title": "SubtitleContext",
+      "type": "object"
+    },
+    "TranslationStyle": {
+      "enum": [
+        "context_adaptive",
+        "literal",
+        "natural"
+      ],
+      "title": "TranslationStyle",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Request to translate one subtitle generation (English to Vietnamese only).",
+  "properties": {
+    "context": {
+      "$ref": "#/$defs/SubtitleContext"
+    },
+    "deadline_ms": {
+      "description": "Budget measured from requested_at.",
+      "exclusiveMinimum": 0,
+      "maximum": 600000,
+      "title": "Deadline Ms",
+      "type": "integer"
+    },
+    "generation_id": {
+      "minimum": 1,
+      "title": "Generation Id",
+      "type": "integer"
+    },
+    "idempotency_key": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "requested_at": {
+      "description": "Timezone-aware UTC ISO-8601 timestamp (serialized with 'Z').",
+      "format": "date-time",
+      "pattern": "(Z|\\+00:00)$",
+      "title": "Requested At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_language": {
+      "const": "en",
+      "default": "en",
+      "title": "Source Language",
+      "type": "string"
+    },
+    "source_text": {
+      "maxLength": 8192,
+      "minLength": 1,
+      "title": "Source Text",
+      "type": "string"
+    },
+    "subtitle_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Subtitle Id",
+      "type": "string"
+    },
+    "target_language": {
+      "const": "vi",
+      "default": "vi",
+      "title": "Target Language",
+      "type": "string"
+    }
+  },
+  "required": [
+    "subtitle_id",
+    "generation_id",
+    "source_text",
+    "context",
+    "requested_at",
+    "deadline_ms",
+    "idempotency_key"
+  ],
+  "title": "TranslationRequest",
+  "type": "object"
+}
