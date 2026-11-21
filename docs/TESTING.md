@@ -22,5 +22,13 @@ Capture: capture_latency. OCR: ocr_latency, CER, WER, Levenshtein. Tracking: tra
 ## Test data
 Maintain three separated datasets: OCR Game Dataset, Game Dialogue EN-VI Dataset and Subtitle Lifecycle Dataset. Store source, license, split and annotation provenance. Do not commit copyrighted game assets or private screenshots without permission.
 
+## Contract verification commands
+```bash
+pip install -e ".[dev]"
+python -m pytest                          # includes schema-staleness and docs-drift tests
+python -m ruff check . && python -m ruff format --check .
+python scripts/export_schemas.py --check  # fails if committed schemas are stale
+```
+
 ## CI baseline
 Run pytest on supported Python versions, lint, contract/schema checks and static checks. Hardware-dependent DXGI and performance tests are tagged and run manually or on a Windows self-hosted runner; CI must not pretend those tests ran.

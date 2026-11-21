@@ -1,7 +1,7 @@
 # Milestone 0 — Architecture and Environment
 
 **Status:** IN PROGRESS  
-**Branch:** `architect/milestone-0`  
+**Branch:** `feature/m0-data-contracts` (M0-02 work; `architect/milestone-0` was merged to `main` in PR #7)  
 **Acceptance owner:** Project Owner  
 **Technical owner:** Agent 0 — Project Architect
 
@@ -13,7 +13,7 @@ Establish approved architecture, shared contracts, source layout, dependency str
 | ID | Work item | Evidence required | Status |
 |---|---|---|---|
 | M0-01 | Confirm approved stack and modular-monolith boundaries | ARCHITECTURE.md reviewed | Draft |
-| M0-02 | Define shared event/data contracts | DATA_CONTRACTS.md + Pydantic/JSON Schema + tests | Draft |
+| M0-02 | Define shared event/data contracts | DATA_CONTRACTS.md + Pydantic/JSON Schema + tests | Implemented and tested locally; **awaiting independent review and Project Owner acceptance** (see below) |
 | M0-03 | Define source tree and module ownership | ARCHITECTURE.md | Draft |
 | M0-04 | Validate Windows/Python compatibility | exact versions + successful imports | Blocked: target machine required |
 | M0-05 | Validate DXGI capture | real frame capture smoke test on target Windows | Blocked |
@@ -42,5 +42,11 @@ Establish approved architecture, shared contracts, source layout, dependency str
 - No unapproved replacement of technologies in the Master Prompt.
 - No claiming environment or hardware tests passed without logs.
 
+## M0-02 status (data contracts)
+- Implemented: all ten Master Prompt contracts (`CapturedFrame`, `TextRegion`, `OCRResult`≡`OCRObservation`, `TrackedText`, `DialogueEvent`≡`LifecycleEvent`, `TranslationRequest`, `TranslationResult`, `OverlayMessage`≡`OverlayUpdate`, `GameProfile`, `PerformanceMetric`) plus `SubtitleContext`/`ErrorInfo`; 13 generated JSON Schemas in `schemas/`.
+- Verified by running: pytest, `ruff check`, `ruff format --check`, `scripts/export_schemas.py --check` (results are in the PR description).
+- Not done / open: reviewer sign-off, owner acceptance, unresolved design decisions listed in `DATA_CONTRACTS.md` §17. Contracts are not yet exercised by any real pipeline module.
+- M0-02 completion does **not** complete Milestone 0; M0-01, M0-03…M0-12 and all exit criteria are unchanged.
+
 ## Current repository inspection
-At inspection time, the private repository contained only a 2-line README, one initial commit, the `main` branch, and no open issues. This milestone work is isolated on `architect/milestone-0`; `main` is left unchanged.
+Historical note: at the original inspection the repository contained only a 2-line README and one commit. The scaffold was later merged to `main` (PR #7). M0-02 work is isolated on `feature/m0-data-contracts`; `main` is left unchanged.

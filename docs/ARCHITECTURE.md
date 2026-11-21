@@ -33,8 +33,11 @@ No microservices. Use bounded queues and asyncio/thread/process workers. Capture
 7. Completion is accepted only if subtitle_id and generation_id still match the active generation.
 8. Overlay renders the latest accepted translation and clears only after lifecycle confirmation.
 
+## 4a. Contract conventions
+All cross-module data uses the Pydantic contracts in `contracts/` (specification: [DATA_CONTRACTS.md](DATA_CONTRACTS.md)). Bounding boxes are **monitor-relative physical pixels and always carry `monitor_id`** (never virtual-desktop coordinates). Frames cross queues as lightweight `FrameBufferRef` leases, not pixel copies. Timestamps are UTC-aware; durations come from a monotonic clock.
+
 ## 5. Lifecycle
-States: NO_TEXT, TEXT_DETECTED, TEXT_STABILIZING, TRANSLATION_PENDING, TRANSLATING, DISPLAYING, TEXT_CHANGED, CLEAR_PENDING, CLEARED, ERROR.
+States: NO_TEXT, TEXT_DETECTED, TEXT_STABILIZING, TRANSLATION_PENDING, TRANSLATING, DISPLAYING, TEXT_CHANGED, CLEAR_PENDING, CLEARED, ERROR. The allowed transition graph is defined in DATA_CONTRACTS.md §9; `CLEARED` is terminal and a reappearing subtitle receives a new subtitle_id.
 
 Every subtitle has a stable unique subtitle_id. Every replacement increments generation_id. A stale result is discarded; it must never overwrite a newer generation. Empty OCR is debounced. Translation tasks have timeouts and cancellation or safe-ignore semantics.
 

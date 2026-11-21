@@ -1,0 +1,230 @@
+{
+  "$defs": {
+    "ErrorCode": {
+      "enum": [
+        "timeout",
+        "network_error",
+        "auth_error",
+        "rate_limited",
+        "model_unavailable",
+        "invalid_request",
+        "invalid_response",
+        "resource_exhausted",
+        "engine_error",
+        "internal_error"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "ErrorInfo": {
+      "additionalProperties": false,
+      "description": "Structured, secret-free error description.\n\n``message`` is passed through :func:`redact_secrets`. No tracebacks, request headers or\nfree-form dictionaries are carried.",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "component": {
+          "$ref": "#/$defs/PipelineComponent"
+        },
+        "error_type": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Type"
+        },
+        "message": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "default": false,
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "status_code": {
+          "anyOf": [
+            {
+              "maximum": 599,
+              "minimum": 100,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status Code"
+        }
+      },
+      "required": [
+        "code",
+        "component",
+        "message"
+      ],
+      "title": "ErrorInfo",
+      "type": "object"
+    },
+    "LifecycleReason": {
+      "enum": [
+        "text_appeared",
+        "text_stabilized",
+        "translation_requested",
+        "translation_started",
+        "translation_completed",
+        "text_changed",
+        "text_disappeared",
+        "text_reappeared",
+        "clear_debounce_elapsed",
+        "stage_error",
+        "recovered"
+      ],
+      "title": "LifecycleReason",
+      "type": "string"
+    },
+    "LifecycleState": {
+      "enum": [
+        "NO_TEXT",
+        "TEXT_DETECTED",
+        "TEXT_STABILIZING",
+        "TRANSLATION_PENDING",
+        "TRANSLATING",
+        "DISPLAYING",
+        "TEXT_CHANGED",
+        "CLEAR_PENDING",
+        "CLEARED",
+        "ERROR"
+      ],
+      "title": "LifecycleState",
+      "type": "string"
+    },
+    "PipelineComponent": {
+      "enum": [
+        "capture",
+        "preprocessing",
+        "region_detection",
+        "ocr",
+        "normalization",
+        "tracking",
+        "context",
+        "translation",
+        "translation_memory",
+        "overlay",
+        "storage",
+        "app"
+      ],
+      "title": "PipelineComponent",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One subtitle lifecycle transition (Master Prompt \"DialogueEvent\").",
+  "properties": {
+    "current_state": {
+      "$ref": "#/$defs/LifecycleState"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ErrorInfo"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "frame_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Frame Id"
+    },
+    "generation_id": {
+      "minimum": 1,
+      "title": "Generation Id",
+      "type": "integer"
+    },
+    "previous_generation_id": {
+      "anyOf": [
+        {
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Set only on TEXT_CHANGED events; equals generation_id - 1.",
+      "title": "Previous Generation Id"
+    },
+    "previous_state": {
+      "$ref": "#/$defs/LifecycleState"
+    },
+    "reason": {
+      "$ref": "#/$defs/LifecycleReason"
+    },
+    "region_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Region Id"
+    },
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "subtitle_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Subtitle Id",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "Timezone-aware UTC ISO-8601 timestamp (serialized with 'Z').",
+      "format": "date-time",
+      "pattern": "(Z|\\+00:00)$",
+      "title": "Timestamp",
+      "type": "string"
+    }
+  },
+  "required": [
+    "subtitle_id",
+    "generation_id",
+    "previous_state",
+    "current_state",
+    "timestamp",
+    "reason"
+  ],
+  "title": "LifecycleEvent",
+  "type": "object"
+}

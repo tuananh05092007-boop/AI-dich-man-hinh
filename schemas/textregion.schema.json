@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "BoundingBox": {
+      "additionalProperties": false,
+      "description": "Axis-aligned rectangle in *monitor-relative* physical pixels.\n\nOrigin is the top-left pixel of the monitor named by ``monitor_id``; x grows right and y\ngrows down. The box is half-open: it covers pixels ``x1 <= x < x2`` and ``y1 <= y < y2``,\nso ``width = x2 - x1``. Coordinates are never virtual-desktop coordinates.",
+      "properties": {
+        "monitor_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Monitor Id",
+          "type": "string"
+        },
+        "x1": {
+          "minimum": 0,
+          "title": "X1",
+          "type": "integer"
+        },
+        "x2": {
+          "minimum": 0,
+          "title": "X2",
+          "type": "integer"
+        },
+        "y1": {
+          "minimum": 0,
+          "title": "Y1",
+          "type": "integer"
+        },
+        "y2": {
+          "minimum": 0,
+          "title": "Y2",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "monitor_id",
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "ContentType": {
+      "enum": [
+        "subtitle",
+        "dialogue",
+        "choice",
+        "quest",
+        "item_description",
+        "ui",
+        "unknown"
+      ],
+      "title": "ContentType",
+      "type": "string"
+    },
+    "RegionSource": {
+      "enum": [
+        "manual_roi",
+        "profile_roi",
+        "auto_detected"
+      ],
+      "title": "RegionSource",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Candidate text region detected in (or configured for) a frame.\n\n``region_id`` identifies a region slot that persists across frames (e.g. ``dialogue_roi``);\n``frame_id`` identifies the capture it was detected in.",
+  "properties": {
+    "bbox": {
+      "$ref": "#/$defs/BoundingBox"
+    },
+    "confidence": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "content_type": {
+      "$ref": "#/$defs/ContentType",
+      "default": "unknown"
+    },
+    "detected_at": {
+      "description": "Timezone-aware UTC ISO-8601 timestamp (serialized with 'Z').",
+      "format": "date-time",
+      "pattern": "(Z|\\+00:00)$",
+      "title": "Detected At",
+      "type": "string"
+    },
+    "frame_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Frame Id",
+      "type": "string"
+    },
+    "region_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Region Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/RegionSource"
+    }
+  },
+  "required": [
+    "region_id",
+    "frame_id",
+    "bbox",
+    "confidence",
+    "source",
+    "detected_at"
+  ],
+  "title": "TextRegion",
+  "type": "object"
+}

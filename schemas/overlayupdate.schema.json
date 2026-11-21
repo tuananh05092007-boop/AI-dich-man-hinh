@@ -1,0 +1,121 @@
+{
+  "$defs": {
+    "BoundingBox": {
+      "additionalProperties": false,
+      "description": "Axis-aligned rectangle in *monitor-relative* physical pixels.\n\nOrigin is the top-left pixel of the monitor named by ``monitor_id``; x grows right and y\ngrows down. The box is half-open: it covers pixels ``x1 <= x < x2`` and ``y1 <= y < y2``,\nso ``width = x2 - x1``. Coordinates are never virtual-desktop coordinates.",
+      "properties": {
+        "monitor_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Monitor Id",
+          "type": "string"
+        },
+        "x1": {
+          "minimum": 0,
+          "title": "X1",
+          "type": "integer"
+        },
+        "x2": {
+          "minimum": 0,
+          "title": "X2",
+          "type": "integer"
+        },
+        "y1": {
+          "minimum": 0,
+          "title": "Y1",
+          "type": "integer"
+        },
+        "y2": {
+          "minimum": 0,
+          "title": "Y2",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "monitor_id",
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "OverlayDisplayMode": {
+      "enum": [
+        "vietnamese_only",
+        "bilingual",
+        "side_by_side",
+        "floating_box"
+      ],
+      "title": "OverlayDisplayMode",
+      "type": "string"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Show or replace the translation for one subtitle generation.\n\nThe overlay must drop the message unless ``is_current(...)`` holds for its active\nsubtitle/generation, and must remove it at ``expires_at`` even if no clear arrives.\nClearing on disappearance is driven by ``LifecycleEvent`` (``CLEARED``).",
+  "properties": {
+    "bbox": {
+      "$ref": "#/$defs/BoundingBox"
+    },
+    "created_at": {
+      "description": "Timezone-aware UTC ISO-8601 timestamp (serialized with 'Z').",
+      "format": "date-time",
+      "pattern": "(Z|\\+00:00)$",
+      "title": "Created At",
+      "type": "string"
+    },
+    "display_mode": {
+      "$ref": "#/$defs/OverlayDisplayMode"
+    },
+    "expires_at": {
+      "description": "Timezone-aware UTC ISO-8601 timestamp (serialized with 'Z').",
+      "format": "date-time",
+      "pattern": "(Z|\\+00:00)$",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "generation_id": {
+      "minimum": 1,
+      "title": "Generation Id",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "0.1",
+      "default": "0.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_text": {
+      "maxLength": 8192,
+      "minLength": 1,
+      "title": "Source Text",
+      "type": "string"
+    },
+    "subtitle_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Subtitle Id",
+      "type": "string"
+    },
+    "translated_text": {
+      "maxLength": 8192,
+      "minLength": 1,
+      "title": "Translated Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "subtitle_id",
+    "generation_id",
+    "source_text",
+    "translated_text",
+    "bbox",
+    "display_mode",
+    "created_at",
+    "expires_at"
+  ],
+  "title": "OverlayUpdate",
+  "type": "object"
+}

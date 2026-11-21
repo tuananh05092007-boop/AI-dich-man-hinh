@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Axis-aligned rectangle in *monitor-relative* physical pixels.\n\nOrigin is the top-left pixel of the monitor named by ``monitor_id``; x grows right and y\ngrows down. The box is half-open: it covers pixels ``x1 <= x < x2`` and ``y1 <= y < y2``,\nso ``width = x2 - x1``. Coordinates are never virtual-desktop coordinates.",
+  "properties": {
+    "monitor_id": {
+      "maxLength": 128,
+      "minLength": 1,
+      "title": "Monitor Id",
+      "type": "string"
+    },
+    "x1": {
+      "minimum": 0,
+      "title": "X1",
+      "type": "integer"
+    },
+    "x2": {
+      "minimum": 0,
+      "title": "X2",
+      "type": "integer"
+    },
+    "y1": {
+      "minimum": 0,
+      "title": "Y1",
+      "type": "integer"
+    },
+    "y2": {
+      "minimum": 0,
+      "title": "Y2",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "monitor_id",
+    "x1",
+    "y1",
+    "x2",
+    "y2"
+  ],
+  "title": "BoundingBox",
+  "type": "object"
+}
