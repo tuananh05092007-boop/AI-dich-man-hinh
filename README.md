@@ -14,7 +14,7 @@
 - UI: PySide6 transparent always-on-top click-through overlay.
 - Architecture: Modular Monolith, bounded queues, asyncio/workers, SQLite and YAML.
 
-See [Architecture](docs/ARCHITECTURE.md), [Contracts](docs/DATA_CONTRACTS.md), [Dependencies](docs/DEPENDENCIES.md), [Testing](docs/TESTING.md), and [Milestone 0](docs/MILESTONE-0.md).
+See [Product scope](docs/PRODUCT_SCOPE.md), [Roadmap](docs/ROADMAP.md), [Decisions](docs/DECISIONS.md), [Flows](docs/FLOWS.md), [Overlay and ROI](docs/OVERLAY_AND_ROI.md), [Architecture](docs/ARCHITECTURE.md), [Contracts](docs/DATA_CONTRACTS.md), [Dependencies](docs/DEPENDENCIES.md), [Testing](docs/TESTING.md), and [Milestone 0](docs/MILESTONE-0.md).
 
 ## Development rules
 - Never commit secrets, API keys, private screenshots or copyrighted game assets without permission.

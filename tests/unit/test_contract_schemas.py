@@ -106,12 +106,42 @@ def test_status_dependent_payloads_validate_against_schema():
     )
 
 
+def test_v02_schema_shape_for_c1_c3():
+    schemas = {name: json.loads(text) for name, text in generate_schemas().items()}
+    request = schemas["translationrequest.schema.json"]
+    assert request["properties"]["trigger"]["$ref"] == "#/$defs/Trigger"
+    assert set(request["$defs"]["Trigger"]["enum"]) == {"auto", "hotkey"}
+    assert "trigger" not in request["required"] and "batch_id" in request["properties"]
+    overlay = schemas["overlayupdate.schema.json"]
+    assert (
+        "display_mode" not in overlay["properties"] and "OverlayDisplayMode" not in overlay["$defs"]
+    )
+    assert "batch_id" in overlay["properties"] and "batch_id" not in overlay["required"]
+    profile = schemas["gameprofile.schema.json"]
+    assert "overlay_display_mode" not in profile["properties"]
+    assert "OverlayDisplayMode" not in profile["$defs"]
+    style = profile["$defs"]["OverlayStyle"]
+    assert style["additionalProperties"] is False
+    assert set(profile["$defs"]["OverlayPlacement"]["enum"]) == {"below", "above"}
+    assert style["properties"]["opacity"]["minimum"] == 0.1
+
+
+def test_schema_rejects_legacy_v01_fields():
+    from ai_screen_translator.contracts import GameProfile, OverlayUpdate
+
+    overlay = OverlayUpdate.model_validate(sample(OverlayUpdate)).model_dump(mode="json")
+    assert list(validator(OverlayUpdate).iter_errors({**overlay, "display_mode": "bilingual"}))
+    profile = GameProfile.model_validate(sample(GameProfile)).model_dump(mode="json")
+    assert list(validator(GameProfile).iter_errors({**profile, "overlay_display_mode": "x"}))
+    assert list(validator(GameProfile).iter_errors({**profile, "schema_version": "0.1"}))
+
+
 def test_schema_requires_monitor_id_and_pins_schema_version():
     bbox = json.loads(generate_schemas()["boundingbox.schema.json"])
     assert "monitor_id" in bbox["required"]
     assert bbox["properties"]["x1"]["minimum"] == 0
     ocr = json.loads(generate_schemas()["ocrobservation.schema.json"])
-    assert ocr["properties"]["schema_version"]["const"] == "0.1"
+    assert ocr["properties"]["schema_version"]["const"] == "0.2"
     assert ocr["properties"]["confidence"]["minimum"] == 0
     assert ocr["properties"]["confidence"]["maximum"] == 1
 

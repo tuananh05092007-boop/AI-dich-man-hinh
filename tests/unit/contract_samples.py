@@ -30,7 +30,7 @@ T2 = "2026-11-20T10:00:02Z"
 BBOX: dict[str, Any] = {"monitor_id": "DISPLAY1", "x1": 250, "y1": 820, "x2": 1300, "y2": 900}
 
 _CONTEXT: dict[str, Any] = {
-    "schema_version": "0.1",
+    "schema_version": "0.2",
     "game_id": "demo_rpg",
     "speaker": "unknown",
     "conversation_history": [
@@ -59,7 +59,7 @@ _ERROR: dict[str, Any] = {
 _SAMPLES: dict[type, dict[str, Any]] = {
     BoundingBox: dict(BBOX),
     CapturedFrame: {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "frame_id": "frame_000042",
         "sequence": 42,
         "monitor_id": "DISPLAY1",
@@ -79,7 +79,7 @@ _SAMPLES: dict[type, dict[str, Any]] = {
     },
     ErrorInfo: dict(_ERROR),
     GameProfile: {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "game_id": "demo_rpg",
         "display_name": "Demo RPG",
         "executable_name": "demo_rpg.exe",
@@ -103,7 +103,15 @@ _SAMPLES: dict[type, dict[str, Any]] = {
             "min_confidence": 0.6,
         },
         "translation_style": "context_adaptive",
-        "overlay_display_mode": "bilingual",
+        "overlay_style": {
+            "placement": "below",
+            "offset_x": 0,
+            "offset_y": 12,
+            "font_size_px": 28,
+            "text_color": "#FFFFFF",
+            "background_color": "#101010",
+            "opacity": 0.85,
+        },
         "glossary_path": "glossaries/demo_rpg.json",
         "glossary": {"Elara": "Elara"},
         "character_names": ["Elara"],
@@ -111,7 +119,7 @@ _SAMPLES: dict[type, dict[str, Any]] = {
         "target_language": "vi",
     },
     LifecycleEvent: {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "subtitle_id": "subtitle_0001",
         "generation_id": 2,
         "previous_state": "DISPLAYING",
@@ -124,7 +132,7 @@ _SAMPLES: dict[type, dict[str, Any]] = {
         "error": None,
     },
     OCRObservation: {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "frame_id": "frame_000042",
         "region_id": "dialogue_roi",
         "subtitle_id": None,
@@ -139,18 +147,18 @@ _SAMPLES: dict[type, dict[str, Any]] = {
         "preprocessing_profile": "outlined_text",
     },
     OverlayUpdate: {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "subtitle_id": "subtitle_0001",
         "generation_id": 1,
         "source_text": "You should not have come here.",
         "translated_text": "Ngươi không nên đến đây.",
         "bbox": dict(BBOX),
-        "display_mode": "bilingual",
         "created_at": T1,
         "expires_at": T2,
+        "batch_id": None,
     },
     PerformanceMetric: {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "metric": "ocr_latency",
         "value": 84.5,
         "unit": "ms",
@@ -164,7 +172,7 @@ _SAMPLES: dict[type, dict[str, Any]] = {
     },
     SubtitleContext: dict(_CONTEXT),
     TextRegion: {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "region_id": "dialogue_roi",
         "frame_id": "frame_000042",
         "bbox": dict(BBOX),
@@ -174,7 +182,7 @@ _SAMPLES: dict[type, dict[str, Any]] = {
         "detected_at": T0,
     },
     TrackedText: {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "subtitle_id": "subtitle_0001",
         "generation_id": 1,
         "region_id": "dialogue_roi",
@@ -191,7 +199,7 @@ _SAMPLES: dict[type, dict[str, Any]] = {
         "last_frame_id": "frame_000044",
     },
     TranslationRequest: {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "subtitle_id": "subtitle_0001",
         "generation_id": 1,
         "source_text": "You should not have come here.",
@@ -201,9 +209,11 @@ _SAMPLES: dict[type, dict[str, Any]] = {
         "requested_at": T1,
         "deadline_ms": 1500,
         "idempotency_key": "subtitle_0001:1:7f3a9c",
+        "trigger": "auto",
+        "batch_id": None,
     },
     TranslationResult: {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "subtitle_id": "subtitle_0001",
         "generation_id": 1,
         "source_text": "You should not have come here.",
@@ -226,6 +236,17 @@ def sample(model: type) -> dict[str, Any]:
 
 def sample_models() -> tuple[type, ...]:
     return tuple(_SAMPLES)
+
+
+def hotkey_request() -> dict[str, Any]:
+    payload = sample(TranslationRequest)
+    payload.update(
+        subtitle_id="f8_batch_0007_1",
+        trigger="hotkey",
+        batch_id="batch_0007",
+        idempotency_key="f8_batch_0007_1:1:7f3a9c",
+    )
+    return payload
 
 
 def failed_result() -> dict[str, Any]:

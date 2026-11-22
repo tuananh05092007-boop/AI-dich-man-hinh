@@ -9,6 +9,7 @@ from contract_samples import (
     BBOX,
     error_event,
     failed_result,
+    hotkey_request,
     sample,
     skipped_result,
 )
@@ -27,6 +28,8 @@ from ai_screen_translator.contracts import (
     OCRObservation,
     OCRResult,
     OverlayMessage,
+    OverlayPlacement,
+    OverlayStyle,
     OverlayUpdate,
     PerformanceMetric,
     SubtitleContext,
@@ -34,6 +37,7 @@ from ai_screen_translator.contracts import (
     TrackedText,
     TranslationRequest,
     TranslationResult,
+    Trigger,
     is_valid_transition,
     redact_secrets,
 )
@@ -66,7 +70,7 @@ def test_every_contract_rejects_unknown_fields(model):
     ids=lambda m: m.__name__,
 )
 def test_top_level_contracts_carry_and_pin_schema_version(model):
-    assert model.model_validate(sample(model)).schema_version == "0.1"
+    assert model.model_validate(sample(model)).schema_version == "0.2"
     invalid(model, schema_version="9.9")
 
 
@@ -373,6 +377,7 @@ def test_conversation_timestamps_must_be_utc():
 # --------------------------------------------------------------------------- #
 def test_translation_request_valid_and_deadline():
     request = TranslationRequest.model_validate(sample(TranslationRequest))
+    assert request.trigger is Trigger.AUTO and request.batch_id is None
     assert request.deadline_at == request.requested_at + timedelta(milliseconds=1500)
     assert request.generation_key == ("subtitle_0001", 1)
     assert (request.source_language, request.target_language) == ("en", "vi")
@@ -396,6 +401,28 @@ def test_translation_request_valid_and_deadline():
 )
 def test_translation_request_invalid(changes):
     invalid(TranslationRequest, **changes)
+
+
+def test_hotkey_request_requires_batch_id_and_auto_forbids_it():
+    request = TranslationRequest.model_validate(hotkey_request())
+    assert (request.trigger, request.batch_id) == (Trigger.HOTKEY, "batch_0007")
+    assert request.generation_key == ("f8_batch_0007_1", 1)
+    invalid(TranslationRequest, **{**hotkey_request(), "batch_id": None})  # hotkey without batch
+    invalid(TranslationRequest, trigger="auto", batch_id="batch_0007")  # auto with batch
+    invalid(TranslationRequest, **{**hotkey_request(), "batch_id": ""})
+    invalid(TranslationRequest, **{**hotkey_request(), "batch_id": " x "})  # whitespace padded
+
+
+@pytest.mark.parametrize("trigger", ["manual", "F8", "", None, 1])
+def test_trigger_is_a_closed_vocabulary(trigger):
+    invalid(TranslationRequest, trigger=trigger)
+
+
+def test_trigger_is_independent_of_region_source():
+    # RegionSource says where the region came from; Trigger says what caused the translation.
+    assert {t.value for t in Trigger} == {"auto", "hotkey"}
+    assert "trigger" not in TextRegion.model_fields
+    assert "source" not in TranslationRequest.model_fields
 
 
 def test_translation_result_completed_invariants():
@@ -519,7 +546,8 @@ def test_generation_scoped_contracts_require_both_ids(model):
 def test_overlay_valid_and_metadata():
     update = OverlayUpdate.model_validate(sample(OverlayUpdate))
     assert update.bbox.monitor_id == "DISPLAY1"
-    assert update.display_mode == "bilingual"
+    assert update.batch_id is None
+    assert "display_mode" not in OverlayUpdate.model_fields
     assert update.is_expired(datetime(2026, 11, 20, 10, 0, 2, tzinfo=UTC))
     assert not update.is_expired(datetime(2026, 11, 20, 10, 0, 1, 500000, tzinfo=UTC))
     with pytest.raises(ValueError):
@@ -529,7 +557,9 @@ def test_overlay_valid_and_metadata():
 @pytest.mark.parametrize(
     "changes",
     [
-        {"display_mode": "hologram"},
+        {"display_mode": "vietnamese_only"},  # removed in v0.2 (extra field)
+        {"batch_id": ""},
+        {"batch_id": " b "},
         {"expires_at": "2026-11-20T10:00:01Z"},  # equal to created_at
         {"expires_at": "2026-11-20T09:00:00Z"},
         {"expires_at": None},
@@ -538,6 +568,12 @@ def test_overlay_valid_and_metadata():
 )
 def test_overlay_invalid(changes):
     invalid(OverlayUpdate, **changes)
+
+
+def test_overlay_update_carries_optional_batch_id():
+    batch = OverlayUpdate.model_validate({**sample(OverlayUpdate), "batch_id": "batch_0007"})
+    assert batch.batch_id == "batch_0007"
+    assert OverlayUpdate.model_validate(sample(OverlayUpdate)).batch_id is None
 
 
 # --------------------------------------------------------------------------- #
@@ -670,6 +706,7 @@ def test_game_profile_valid_and_defaults():
     assert profile.roi[0].bbox.monitor_id == "DISPLAY1"
     minimal = GameProfile.model_validate({"game_id": "g"})
     assert minimal.display_mode == "unknown" and minimal.roi == []
+    assert minimal.overlay_style == OverlayStyle()  # defaults come from the style model
     assert minimal.ocr.profile == "default" and (
         minimal.source_language,
         minimal.target_language,
@@ -708,6 +745,100 @@ def test_game_profile_invalid(changes):
 def test_game_profile_without_reference_resolution_does_not_invent_bounds():
     payload = {**sample(GameProfile), "reference_resolution": None, "roi": [_roi(x2=99_999)]}
     assert GameProfile.model_validate(payload)
+
+
+def test_overlay_display_mode_is_gone():
+    import ai_screen_translator.contracts as contracts
+    from ai_screen_translator.contracts import models
+
+    assert not hasattr(models, "OverlayDisplayMode")
+    assert not hasattr(contracts, "OverlayDisplayMode")
+    assert "overlay_display_mode" not in GameProfile.model_fields
+    assert "overlay_style" in GameProfile.model_fields
+    assert {p.value for p in OverlayPlacement} == {"below", "above"}
+
+
+def test_overlay_style_defaults_and_per_game_values():
+    style = OverlayStyle()
+    assert (style.placement, style.offset_x, style.offset_y) == (OverlayPlacement.BELOW, 0, 0)
+    assert (style.font_size_px, style.text_color, style.background_color) == (
+        24,
+        "#FFFFFF",
+        "#000000",
+    )
+    assert style.opacity == 0.85
+    profile = GameProfile.model_validate(sample(GameProfile))
+    assert profile.overlay_style.font_size_px == 28 and profile.overlay_style.offset_y == 12
+    other = GameProfile.model_validate({"game_id": "other"})
+    assert other.overlay_style.font_size_px == 24  # per-game: profiles do not share state
+
+
+def test_overlay_style_is_immutable_and_profile_instances_do_not_share_defaults():
+    a, b = GameProfile(game_id="a"), GameProfile(game_id="b")
+    assert a.overlay_style is not b.overlay_style
+    with pytest.raises(ValidationError):
+        a.overlay_style.font_size_px = 30  # frozen value object
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"placement": "left"},
+        {"placement": "bilingual"},
+        {"offset_x": 4097},
+        {"offset_y": -4097},
+        {"offset_x": 1.5},
+        {"offset_x": True},
+        {"font_size_px": 7},
+        {"font_size_px": 129},
+        {"font_size_px": 24.0},
+        {"text_color": "white"},
+        {"text_color": "#FFF"},
+        {"text_color": "#GGGGGG"},
+        {"text_color": "#FFFFFFFF"},
+        {"background_color": "000000"},
+        {"opacity": 0.0},
+        {"opacity": 0.09},
+        {"opacity": 1.01},
+        {"opacity": math.nan},
+        {"opacity": math.inf},
+        {"color": "#FFFFFF"},  # unknown field
+    ],
+)
+def test_overlay_style_invalid(changes):
+    with pytest.raises(ValidationError):
+        OverlayStyle.model_validate(changes)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"offset_x": -4096, "offset_y": 4096},
+        {"font_size_px": 8},
+        {"font_size_px": 128},
+        {"opacity": 0.1},
+        {"opacity": 1.0},
+        {"text_color": "#abcdef", "background_color": "#ABCDEF"},
+        {"placement": "above"},
+    ],
+)
+def test_overlay_style_boundaries_are_accepted(changes):
+    assert OverlayStyle.model_validate(changes)
+
+
+def test_game_profile_rejects_invalid_overlay_style_and_legacy_field():
+    invalid(GameProfile, overlay_style={"placement": "left"})
+    invalid(GameProfile, overlay_style="below")
+    invalid(GameProfile, overlay_display_mode="bilingual")  # legacy field removed in v0.2
+
+
+def test_rois_without_enabled_entries_mean_no_roi():
+    # C4: no new ROI fields; an empty or all-disabled list is how "no ROI" is represented.
+    assert not {"trigger", "mode"} & set(GameProfile.model_fields)
+    only_disabled = {**sample(GameProfile)}
+    only_disabled["roi"][0]["enabled"] = False
+    profile = GameProfile.model_validate(only_disabled)
+    assert [r for r in profile.roi if r.enabled] == []
 
 
 def test_game_profile_has_no_secret_fields():

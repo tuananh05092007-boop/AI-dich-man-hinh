@@ -150,8 +150,8 @@
       "$ref": "#/$defs/PixelFormat"
     },
     "schema_version": {
-      "const": "0.1",
-      "default": "0.1",
+      "const": "0.2",
+      "default": "0.2",
       "title": "Schema Version",
       "type": "string"
     },

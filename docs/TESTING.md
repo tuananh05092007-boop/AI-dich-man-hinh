@@ -18,6 +18,10 @@ Capture: capture_latency. OCR: ocr_latency, CER, WER, Levenshtein. Tracking: tra
 5. API timeout/offline: capture and OCR continue; local fallback is attempted where appropriate.
 6. OCR or translation worker exception: application remains alive and emits structured error.
 7. Cache hit: no unnecessary inference or API call.
+8. F8 pressed twice: the older batch is superseded and its late results are discarded.
+9. F8 and Auto at an overlapping position: the F8 message is shown.
+10. F8 with more than 20 text blocks: only the first 20 are processed and the user is told.
+11. Overlay edit mode: the 60 s idle timer resets on interaction, does not fire during a drag, and the overlay is click-through again on exit.
 
 ## Test data
 Maintain three separated datasets: OCR Game Dataset, Game Dialogue EN-VI Dataset and Subtitle Lifecycle Dataset. Store source, license, split and annotation provenance. Do not commit copyrighted game assets or private screenshots without permission.
@@ -31,4 +35,4 @@ python scripts/export_schemas.py --check  # fails if committed schemas are stale
 ```
 
 ## CI baseline
-Run pytest on supported Python versions, lint, contract/schema checks and static checks. Hardware-dependent DXGI and performance tests are tagged and run manually or on a Windows self-hosted runner; CI must not pretend those tests ran.
+A mandatory CI pipeline is **not required at this stage** (owner decision 2026-11-22, DECISIONS.md D-20). Tests are run manually and reported with their real output. If CI is added later it must run pytest, lint, contract/schema checks and static checks, and must not pretend that hardware-dependent DXGI and performance tests ran.

@@ -40,22 +40,26 @@
       ],
       "title": "BoundingBox",
       "type": "object"
-    },
-    "OverlayDisplayMode": {
-      "enum": [
-        "vietnamese_only",
-        "bilingual",
-        "side_by_side",
-        "floating_box"
-      ],
-      "title": "OverlayDisplayMode",
-      "type": "string"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Show or replace the translation for one subtitle generation.\n\nThe overlay must drop the message unless ``is_current(...)`` holds for its active\nsubtitle/generation, and must remove it at ``expires_at`` even if no clear arrives.\nClearing on disappearance is driven by ``LifecycleEvent`` (``CLEARED``).",
+  "description": "Show or replace the translation for one subtitle generation.\n\nThe overlay must drop the message unless ``is_current(...)`` holds for its active\nsubtitle/generation, and must remove it at ``expires_at`` even if no clear arrives.\nClearing on disappearance is driven by ``LifecycleEvent`` (``CLEARED``).\n\nThe overlay shows Vietnamese only; how it is placed and styled comes from the game's\n``OverlayStyle``, not from this message. ``batch_id`` is set for messages that originate from\none manual-translate (F8) press, so the whole batch can be replaced or removed together; it is\n``None`` for automatic-mode messages.",
   "properties": {
+    "batch_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Batch Id"
+    },
     "bbox": {
       "$ref": "#/$defs/BoundingBox"
     },
@@ -65,9 +69,6 @@
       "pattern": "(Z|\\+00:00)$",
       "title": "Created At",
       "type": "string"
-    },
-    "display_mode": {
-      "$ref": "#/$defs/OverlayDisplayMode"
     },
     "expires_at": {
       "description": "Timezone-aware UTC ISO-8601 timestamp (serialized with 'Z').",
@@ -82,8 +83,8 @@
       "type": "integer"
     },
     "schema_version": {
-      "const": "0.1",
-      "default": "0.1",
+      "const": "0.2",
+      "default": "0.2",
       "title": "Schema Version",
       "type": "string"
     },
@@ -112,7 +113,6 @@
     "source_text",
     "translated_text",
     "bbox",
-    "display_mode",
     "created_at",
     "expires_at"
   ],

@@ -86,8 +86,8 @@
           "type": "object"
         },
         "schema_version": {
-          "const": "0.1",
-          "default": "0.1",
+          "const": "0.2",
+          "default": "0.2",
           "title": "Schema Version",
           "type": "string"
         },
@@ -129,12 +129,35 @@
       ],
       "title": "TranslationStyle",
       "type": "string"
+    },
+    "Trigger": {
+      "description": "What caused a translation.\n\nIndependent of ``RegionSource``, which says where the OCR region came from.",
+      "enum": [
+        "auto",
+        "hotkey"
+      ],
+      "title": "Trigger",
+      "type": "string"
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Request to translate one subtitle generation (English to Vietnamese only).",
+  "description": "Request to translate one subtitle generation (English to Vietnamese only).\n\n``trigger`` says what caused the request. An ``auto`` request comes from the lifecycle-driven\nautomatic mode and has no ``batch_id``. A ``hotkey`` request comes from one manual-translate\n(F8) press: every text block of that press shares one ``batch_id`` (required), which lets the\nconsumers discard the whole batch when a newer press supersedes it.",
   "properties": {
+    "batch_id": {
+      "anyOf": [
+        {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Batch Id"
+    },
     "context": {
       "$ref": "#/$defs/SubtitleContext"
     },
@@ -164,8 +187,8 @@
       "type": "string"
     },
     "schema_version": {
-      "const": "0.1",
-      "default": "0.1",
+      "const": "0.2",
+      "default": "0.2",
       "title": "Schema Version",
       "type": "string"
     },
@@ -192,6 +215,10 @@
       "default": "vi",
       "title": "Target Language",
       "type": "string"
+    },
+    "trigger": {
+      "$ref": "#/$defs/Trigger",
+      "default": "auto"
     }
   },
   "required": [

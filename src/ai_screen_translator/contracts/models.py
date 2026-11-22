@@ -30,7 +30,7 @@ from pydantic import (
     model_validator,
 )
 
-SCHEMA_VERSION = "0.1"
+SCHEMA_VERSION = "0.2"
 MAX_TEXT_LENGTH = 8192
 UNKNOWN_SPEAKER = "unknown"
 REDACTED = "[REDACTED]"
@@ -63,8 +63,9 @@ __all__ = [
     "OCRObservation",
     "OCRPreprocessingConfig",
     "OCRResult",
-    "OverlayDisplayMode",
     "OverlayMessage",
+    "OverlayPlacement",
+    "OverlayStyle",
     "OverlayUpdate",
     "PerformanceMetric",
     "PerformanceMetricName",
@@ -83,6 +84,7 @@ __all__ = [
     "TranslationResult",
     "TranslationStatus",
     "TranslationStyle",
+    "Trigger",
     "is_valid_transition",
     "redact_secrets",
 ]
@@ -135,6 +137,10 @@ Label = Annotated[str, Field(min_length=1, max_length=128), AfterValidator(_mean
 ExecutableName = Annotated[str, Field(min_length=1, max_length=260), AfterValidator(_meaningful)]
 GenerationId = Annotated[int, Field(ge=1, strict=True)]
 PixelCoord = Annotated[int, Field(ge=0, strict=True)]
+HexColor = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$", description="Colour as #RRGGBB.")]
+OverlayOffset = Annotated[int, Field(ge=-4096, le=4096, strict=True)]
+FontSizePx = Annotated[int, Field(ge=8, le=128, strict=True)]
+OverlayOpacity = Annotated[float, Field(ge=0.1, le=1.0, allow_inf_nan=False)]
 Confidence = Annotated[float, Field(ge=0.0, le=1.0, allow_inf_nan=False)]
 NonNegativeFloat = Annotated[float, Field(ge=0.0, allow_inf_nan=False)]
 UtcDatetime = Annotated[
@@ -179,7 +185,7 @@ class ContractModel(BaseModel):
     """Base for every top-level, externally exchanged contract (carries schema_version)."""
 
     model_config = ConfigDict(extra="forbid", validate_assignment=True)
-    schema_version: Literal["0.1"] = SCHEMA_VERSION
+    schema_version: Literal["0.2"] = SCHEMA_VERSION
 
 
 class ContractValue(BaseModel):
@@ -323,11 +329,21 @@ class TranslationStyle(StrEnum):
     NATURAL = "natural"
 
 
-class OverlayDisplayMode(StrEnum):
-    VIETNAMESE_ONLY = "vietnamese_only"
-    BILINGUAL = "bilingual"
-    SIDE_BY_SIDE = "side_by_side"
-    FLOATING_BOX = "floating_box"
+class Trigger(StrEnum):
+    """What caused a translation.
+
+    Independent of ``RegionSource``, which says where the OCR region came from.
+    """
+
+    AUTO = "auto"  # the automatic mode (lifecycle-driven)
+    HOTKEY = "hotkey"  # the user pressed the manual-translate key (F8)
+
+
+class OverlayPlacement(StrEnum):
+    """Where the Vietnamese overlay sits relative to the original text it translates."""
+
+    BELOW = "below"
+    ABOVE = "above"
 
 
 class GameDisplayMode(StrEnum):
@@ -721,7 +737,13 @@ class SubtitleContext(ContractModel):
 
 
 class TranslationRequest(GenerationScopedContract):
-    """Request to translate one subtitle generation (English to Vietnamese only)."""
+    """Request to translate one subtitle generation (English to Vietnamese only).
+
+    ``trigger`` says what caused the request. An ``auto`` request comes from the lifecycle-driven
+    automatic mode and has no ``batch_id``. A ``hotkey`` request comes from one manual-translate
+    (F8) press: every text block of that press shares one ``batch_id`` (required), which lets the
+    consumers discard the whole batch when a newer press supersedes it.
+    """
 
     source_text: MeaningfulText
     context: SubtitleContext
@@ -732,6 +754,16 @@ class TranslationRequest(GenerationScopedContract):
         gt=0, le=600_000, strict=True, description="Budget measured from requested_at."
     )
     idempotency_key: Identifier
+    trigger: Trigger = Trigger.AUTO
+    batch_id: Identifier | None = None
+
+    @model_validator(mode="after")
+    def _batch_matches_trigger(self) -> Self:
+        if self.trigger is Trigger.HOTKEY and self.batch_id is None:
+            raise ValueError("hotkey requests require batch_id")
+        if self.trigger is Trigger.AUTO and self.batch_id is not None:
+            raise ValueError("auto requests must not carry batch_id")
+        return self
 
     @property
     def deadline_at(self) -> datetime:
@@ -792,14 +824,19 @@ class OverlayUpdate(GenerationScopedContract):
     The overlay must drop the message unless ``is_current(...)`` holds for its active
     subtitle/generation, and must remove it at ``expires_at`` even if no clear arrives.
     Clearing on disappearance is driven by ``LifecycleEvent`` (``CLEARED``).
+
+    The overlay shows Vietnamese only; how it is placed and styled comes from the game's
+    ``OverlayStyle``, not from this message. ``batch_id`` is set for messages that originate from
+    one manual-translate (F8) press, so the whole batch can be replaced or removed together; it is
+    ``None`` for automatic-mode messages.
     """
 
     source_text: MeaningfulText
     translated_text: MeaningfulText
     bbox: BoundingBox
-    display_mode: OverlayDisplayMode
     created_at: UtcDatetime
     expires_at: UtcDatetime
+    batch_id: Identifier | None = None
 
     @model_validator(mode="after")
     def _expiry_after_creation(self) -> Self:
@@ -834,6 +871,24 @@ class RoiConfig(ContractValue):
     enabled: bool = True
 
 
+class OverlayStyle(ContractValue):
+    """How the Vietnamese overlay looks for one game (stored per game in ``GameProfile``).
+
+    ``placement`` positions the overlay below or above the original text; ``offset_x`` /
+    ``offset_y`` are signed pixel adjustments from that anchor (what the user sets by dragging in
+    edit mode). ``opacity`` applies to the whole overlay and is bounded below so the overlay can
+    never become invisible.
+    """
+
+    placement: OverlayPlacement = OverlayPlacement.BELOW
+    offset_x: OverlayOffset = 0
+    offset_y: OverlayOffset = 0
+    font_size_px: FontSizePx = 24
+    text_color: HexColor = "#FFFFFF"
+    background_color: HexColor = "#000000"
+    opacity: OverlayOpacity = 0.85
+
+
 def _relative_path(value: str) -> str:
     _meaningful(value)
     if re.match(r"^([A-Za-z]:|[\\/])", value) or ".." in re.split(r"[\\/]", value):
@@ -856,7 +911,7 @@ class GameProfile(ContractModel):
     roi: list[RoiConfig] = Field(default_factory=list, max_length=32)
     ocr: OCRPreprocessingConfig = Field(default_factory=OCRPreprocessingConfig)
     translation_style: TranslationStyle = TranslationStyle.CONTEXT_ADAPTIVE
-    overlay_display_mode: OverlayDisplayMode = OverlayDisplayMode.BILINGUAL
+    overlay_style: OverlayStyle = Field(default_factory=OverlayStyle)
     glossary_path: RelativePath | None = None
     glossary: dict[Term, Term] = Field(default_factory=dict, max_length=1024)
     character_names: list[Term] = Field(default_factory=list, max_length=256)

@@ -33,6 +33,9 @@ No microservices. Use bounded queues and asyncio/thread/process workers. Capture
 7. Completion is accepted only if subtitle_id and generation_id still match the active generation.
 8. Overlay renders the latest accepted translation and clears only after lifecycle confirmation.
 
+### 4.1 Manual translate (F8) path
+F8 is a one-shot path beside the automatic one; it reuses capture, OCR, the router and the overlay but **bypasses the lifecycle state machine**. One press creates a `batch_id`; every text block (at most 20 initially) becomes a `TranslationRequest` with `trigger = hotkey` and that `batch_id`. A newer press supersedes the older batch and late results of the old batch are discarded by the generation guard plus the active-batch check. An F8 result takes priority over an Auto result at an overlapping position. Both paths read the same per-game ROI list; with no enabled ROI, F8 uses the whole screen and Auto does not start. See [FLOWS.md](FLOWS.md) and [OVERLAY_AND_ROI.md](OVERLAY_AND_ROI.md); decisions are indexed in [DECISIONS.md](DECISIONS.md).
+
 ## 4a. Contract conventions
 All cross-module data uses the Pydantic contracts in `contracts/` (specification: [DATA_CONTRACTS.md](DATA_CONTRACTS.md)). Bounding boxes are **monitor-relative physical pixels and always carry `monitor_id`** (never virtual-desktop coordinates). Frames cross queues as lightweight `FrameBufferRef` leases, not pixel copies. Timestamps are UTC-aware; durations come from a monotonic clock.
 
@@ -45,7 +48,7 @@ Every subtitle has a stable unique subtitle_id. Every replacement increments gen
 Measure capture_latency, ocr_latency, tracking_latency, translation_latency, render_latency, end_to_end_latency, cpu_usage, ram_usage, gpu_usage and vram_usage. Bound all queues and caches. Apply per-stage timeouts. A worker failure is surfaced as a structured error and must not terminate the application. Prefer latest-frame semantics for capture.
 
 ## 7. UI compatibility
-Implement Windowed and Borderless Windowed first. Fullscreen Exclusive is an explicitly unverified compatibility target and requires testing plus fallback. Overlay supports transparent, always-on-top, click-through behavior, user position and configurable subtitle modes.
+Implement Windowed and Borderless Windowed first. Fullscreen Exclusive is an explicitly unverified compatibility target and requires testing plus fallback. Overlay shows Vietnamese only and supports transparent, always-on-top, click-through behavior (during play), a separate edit mode for repositioning, and a per-game `OverlayStyle` (placement below/above, offset, font size, colours, opacity). Behaviour on the target machine is unverified (Windows test W6).
 
 ## 8. Security
 Never commit API keys, tokens, credentials, private screenshots or user data. Load secrets from environment variables or Windows credential storage. Redact secrets from logs. Keep game profiles and user settings local.

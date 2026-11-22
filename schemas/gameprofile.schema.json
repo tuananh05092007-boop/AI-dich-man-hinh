@@ -108,15 +108,68 @@
       "title": "OCRPreprocessingConfig",
       "type": "object"
     },
-    "OverlayDisplayMode": {
+    "OverlayPlacement": {
+      "description": "Where the Vietnamese overlay sits relative to the original text it translates.",
       "enum": [
-        "vietnamese_only",
-        "bilingual",
-        "side_by_side",
-        "floating_box"
+        "below",
+        "above"
       ],
-      "title": "OverlayDisplayMode",
+      "title": "OverlayPlacement",
       "type": "string"
+    },
+    "OverlayStyle": {
+      "additionalProperties": false,
+      "description": "How the Vietnamese overlay looks for one game (stored per game in ``GameProfile``).\n\n``placement`` positions the overlay below or above the original text; ``offset_x`` /\n``offset_y`` are signed pixel adjustments from that anchor (what the user sets by dragging in\nedit mode). ``opacity`` applies to the whole overlay and is bounded below so the overlay can\nnever become invisible.",
+      "properties": {
+        "background_color": {
+          "default": "#000000",
+          "description": "Colour as #RRGGBB.",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "title": "Background Color",
+          "type": "string"
+        },
+        "font_size_px": {
+          "default": 24,
+          "maximum": 128,
+          "minimum": 8,
+          "title": "Font Size Px",
+          "type": "integer"
+        },
+        "offset_x": {
+          "default": 0,
+          "maximum": 4096,
+          "minimum": -4096,
+          "title": "Offset X",
+          "type": "integer"
+        },
+        "offset_y": {
+          "default": 0,
+          "maximum": 4096,
+          "minimum": -4096,
+          "title": "Offset Y",
+          "type": "integer"
+        },
+        "opacity": {
+          "default": 0.85,
+          "maximum": 1.0,
+          "minimum": 0.1,
+          "title": "Opacity",
+          "type": "number"
+        },
+        "placement": {
+          "$ref": "#/$defs/OverlayPlacement",
+          "default": "below"
+        },
+        "text_color": {
+          "default": "#FFFFFF",
+          "description": "Colour as #RRGGBB.",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "title": "Text Color",
+          "type": "string"
+        }
+      },
+      "title": "OverlayStyle",
+      "type": "object"
     },
     "Resolution": {
       "additionalProperties": false,
@@ -275,9 +328,8 @@
     "ocr": {
       "$ref": "#/$defs/OCRPreprocessingConfig"
     },
-    "overlay_display_mode": {
-      "$ref": "#/$defs/OverlayDisplayMode",
-      "default": "bilingual"
+    "overlay_style": {
+      "$ref": "#/$defs/OverlayStyle"
     },
     "reference_resolution": {
       "anyOf": [
@@ -299,8 +351,8 @@
       "type": "array"
     },
     "schema_version": {
-      "const": "0.1",
-      "default": "0.1",
+      "const": "0.2",
+      "default": "0.2",
       "title": "Schema Version",
       "type": "string"
     },

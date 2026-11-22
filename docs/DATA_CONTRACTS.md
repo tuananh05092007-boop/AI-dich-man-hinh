@@ -1,6 +1,6 @@
 # Shared Data Contracts
 
-**Status:** Implemented v0.1 (M0-02) — pending independent review and Project Owner acceptance.
+**Status:** Implemented v0.2 (M0-02 + owner-approved changes C1–C6 of 2026-11-22) — pending independent review and Project Owner acceptance.
 **Canonical implementation:** `src/ai_screen_translator/contracts/models.py` (Pydantic v2).
 **Generated artifacts:** `schemas/*.schema.json` (JSON Schema draft 2020-12, generated from the models).
 **This document** is the authoritative human-readable specification. If it disagrees with the
@@ -37,7 +37,7 @@ These apply to every contract and are enforced by validation.
 | Rule | Definition |
 |---|---|
 | Unknown fields | Rejected (`extra="forbid"`) on every model. No contract carries free-form extension data. |
-| `schema_version` | Every top-level contract has `schema_version: "0.1"` (see §13). Nested value objects are versioned through their parent. |
+| `schema_version` | Every top-level contract has `schema_version: "0.2"` (see §13). Nested value objects are versioned through their parent. |
 | Timestamps | Timezone-aware, offset exactly UTC. Naive datetimes and non-UTC offsets are rejected (never silently converted). |
 | Confidence | Float in `[0, 1]`; `NaN`/`inf` rejected. |
 | `generation_id` | Strict integer `>= 1` (booleans and floats rejected). |
@@ -127,7 +127,7 @@ terminal: a subtitle that disappears and later reappears receives a **new** `sub
 ## 6. Contract reference
 
 Legend: **R** required, **O** optional (default shown). All models also require/accept
-`schema_version` (default `"0.1"`) unless marked *nested*.
+`schema_version` (default `"0.2"`) unless marked *nested*.
 
 ### 6.1 CapturedFrame (R: all except noted)
 A full-monitor frame. Pixels are **not** in the contract.
@@ -248,6 +248,12 @@ Generation-scoped.
 | `requested_at` | UTC datetime, R |
 | `deadline_ms` | strict int, `0 < x <= 600000`, R — budget from `requested_at` |
 | `idempotency_key` | Identifier, R |
+| `trigger` | `auto` \| `hotkey`, O (`auto`) — what caused the request (independent of `RegionSource`) |
+| `batch_id` | Identifier or null — **required iff `trigger` is `hotkey`**, forbidden for `auto` |
+
+One manual-translate (F8) press yields several requests that share one `batch_id`, so a newer
+press can discard the whole older batch. F8 text blocks do not use the lifecycle state machine;
+each block gets its own `subtitle_id` and `generation_id = 1` so the generation guard still applies.
 
 ### 6.8 TranslationResult
 Generation-scoped. See §8 for the status invariants.
@@ -271,9 +277,12 @@ Generation-scoped.
 |---|---|
 | `source_text`, `translated_text` | non-blank text, R |
 | `bbox` | `BoundingBox`, R — original-text box the overlay anchors to |
-| `display_mode` | `vietnamese_only` \| `bilingual` \| `side_by_side` \| `floating_box`, R |
 | `created_at` | UTC datetime, R |
 | `expires_at` | UTC datetime, R, must be after `created_at` |
+| `batch_id` | Identifier or null — set for messages from one F8 press, null for Auto messages |
+
+The overlay shows Vietnamese only. Placement and look come from the game's `OverlayStyle`
+(§6.10), not from this message; the former `display_mode` field was removed in v0.2.
 
 Stale rejection: the overlay keeps the active `(subtitle_id, generation_id)` and drops the
 message unless `update.is_current(...)`. `is_expired(now)` supports expiry. Clearing on
@@ -293,11 +302,24 @@ Local configuration; contains no secrets (extra fields rejected; no key/credenti
 | `roi` | list of `RoiConfig{region_id, bbox, content_type=subtitle, enabled=true}` (≤ 32, unique `region_id`) |
 | `ocr` | `OCRPreprocessingConfig{profile="default", adaptive_threshold, clahe, invert, scale_factor (0,8], min_confidence [0,1]}` |
 | `translation_style` | enum as above, O (`context_adaptive`) |
-| `overlay_display_mode` | enum, O (`bilingual`) |
+| `overlay_style` | `OverlayStyle` (nested, per game), O (defaults below) |
 | `glossary_path` | **relative** path (no drive, no leading slash, no `..`) or null |
 | `glossary` | `{term: translation}` (≤ 1024), O |
 | `character_names` | unique list of terms (≤ 256), O |
 | `source_language`, `target_language` | literals `en` / `vi` |
+
+`roi` is shared by Auto and Manual. There is no extra ROI field: an empty list, or a list with
+no `enabled` entry, means "no ROI" (Auto does not start; F8 uses the whole screen).
+
+**`OverlayStyle`** (nested value object, no `schema_version`):
+
+| Field | Type / constraint |
+|---|---|
+| `placement` | `below` \| `above`, O (`below`) |
+| `offset_x`, `offset_y` | strict int in `[-4096, 4096]` pixels, O (`0`) — signed adjustment from the anchor |
+| `font_size_px` | strict int in `[8, 128]`, O (`24`) |
+| `text_color`, `background_color` | `#RRGGBB` string, O (`#FFFFFF` / `#000000`) |
+| `opacity` | float in `[0.1, 1.0]`, O (`0.85`) — lower bound keeps the overlay visible |
 
 ### 6.11 PerformanceMetric
 One measured value per record.
@@ -327,7 +349,8 @@ Percent values must be ≤ 100. Latency values come from monotonic measurements.
 | `ErrorCode` | `timeout`, `network_error`, `auth_error`, `rate_limited`, `model_unavailable`, `invalid_request`, `invalid_response`, `resource_exhausted`, `engine_error`, `internal_error` |
 | `RegionSource` | `manual_roi`, `profile_roi`, `auto_detected` |
 | `ContentType` | `subtitle`, `dialogue`, `choice`, `quest`, `item_description`, `ui`, `unknown` |
-| `OverlayDisplayMode` | `vietnamese_only`, `bilingual`, `side_by_side`, `floating_box` |
+| `Trigger` | `auto`, `hotkey` |
+| `OverlayPlacement` | `below`, `above` |
 | `GameDisplayMode` | `windowed`, `borderless_windowed`, `fullscreen_exclusive`, `unknown` |
 | `TranslationStyle` | `context_adaptive`, `literal`, `natural` |
 | `PixelFormat` | `bgra8`, `bgr8`, `rgb8`, `gray8` |
@@ -423,7 +446,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: CapturedFrame -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "frame_id": "frame_000042",
   "sequence": 42,
   "monitor_id": "DISPLAY1",
@@ -455,7 +478,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: TextRegion -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "region_id": "dialogue_roi",
   "frame_id": "frame_000042",
   "bbox": {
@@ -476,7 +499,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: OCRObservation -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "frame_id": "frame_000042",
   "region_id": "dialogue_roi",
   "subtitle_id": null,
@@ -502,7 +525,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: TrackedText -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "subtitle_id": "subtitle_0001",
   "generation_id": 1,
   "region_id": "dialogue_roi",
@@ -530,7 +553,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: LifecycleEvent -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "subtitle_id": "subtitle_0001",
   "generation_id": 2,
   "previous_state": "DISPLAYING",
@@ -548,7 +571,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: LifecycleEvent -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "subtitle_id": "subtitle_0001",
   "generation_id": 1,
   "previous_state": "TRANSLATING",
@@ -573,12 +596,12 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: TranslationRequest -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "subtitle_id": "subtitle_0001",
   "generation_id": 1,
   "source_text": "You should not have come here.",
   "context": {
-    "schema_version": "0.1",
+    "schema_version": "0.2",
     "game_id": "demo_rpg",
     "speaker": "unknown",
     "conversation_history": [
@@ -601,7 +624,9 @@ All examples below are validated against the models by `tests/unit/test_contract
   "target_language": "vi",
   "requested_at": "2026-11-20T10:00:01Z",
   "deadline_ms": 1500,
-  "idempotency_key": "subtitle_0001:1:7f3a9c"
+  "idempotency_key": "subtitle_0001:1:7f3a9c",
+  "trigger": "auto",
+  "batch_id": null
 }
 ```
 
@@ -609,7 +634,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: TranslationResult -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "subtitle_id": "subtitle_0001",
   "generation_id": 1,
   "source_text": "You should not have come here.",
@@ -628,7 +653,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: TranslationResult -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "subtitle_id": "subtitle_0001",
   "generation_id": 1,
   "source_text": "You should not have come here.",
@@ -654,7 +679,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: TranslationResult -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "subtitle_id": "subtitle_0001",
   "generation_id": 1,
   "source_text": "You should not have come here.",
@@ -673,7 +698,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: OverlayUpdate -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "subtitle_id": "subtitle_0001",
   "generation_id": 1,
   "source_text": "You should not have come here.",
@@ -685,9 +710,9 @@ All examples below are validated against the models by `tests/unit/test_contract
     "x2": 1300,
     "y2": 900
   },
-  "display_mode": "bilingual",
   "created_at": "2026-11-20T10:00:01Z",
-  "expires_at": "2026-11-20T10:00:02Z"
+  "expires_at": "2026-11-20T10:00:02Z",
+  "batch_id": null
 }
 ```
 
@@ -695,7 +720,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: GameProfile -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "game_id": "demo_rpg",
   "display_name": "Demo RPG",
   "executable_name": "demo_rpg.exe",
@@ -728,7 +753,15 @@ All examples below are validated against the models by `tests/unit/test_contract
     "min_confidence": 0.6
   },
   "translation_style": "context_adaptive",
-  "overlay_display_mode": "bilingual",
+  "overlay_style": {
+    "placement": "below",
+    "offset_x": 0,
+    "offset_y": 12,
+    "font_size_px": 28,
+    "text_color": "#FFFFFF",
+    "background_color": "#101010",
+    "opacity": 0.85
+  },
   "glossary_path": "glossaries/demo_rpg.json",
   "glossary": {
     "Elara": "Elara"
@@ -745,7 +778,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: PerformanceMetric -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "metric": "ocr_latency",
   "value": 84.5,
   "unit": "ms",
@@ -763,7 +796,7 @@ All examples below are validated against the models by `tests/unit/test_contract
 <!-- contract: SubtitleContext -->
 ```json
 {
-  "schema_version": "0.1",
+  "schema_version": "0.2",
   "game_id": "demo_rpg",
   "speaker": "unknown",
   "conversation_history": [
@@ -787,19 +820,19 @@ All examples below are validated against the models by `tests/unit/test_contract
 
 ## 13. Versioning policy
 
-* The existing policy is unchanged: a single contract-set version string, currently `"0.1"`,
-  carried as `schema_version` and typed `Literal["0.1"]`. A payload with any other version is
-  rejected rather than guessed at.
+* A single contract-set version string, currently `"0.2"`, carried as `schema_version` and typed
+  `Literal["0.2"]`. A payload with any other version (including `"0.1"`) is rejected rather than
+  guessed at.
 * `0.x` is the pre-release line. Until a first release, breaking changes are allowed but each
-  must bump the minor (`0.2`, …), be listed in the compatibility table in §14, and ship with
+  must bump the minor (`0.3`, …), be listed in the compatibility table in §14, and ship with
   regenerated schemas and updated tests.
 * From `1.0`: additive, backward-compatible changes (new optional field, new enum value
   consumers can ignore) bump minor; removed/renamed fields, tightened constraints or changed
   semantics bump major.
-* **This task did not bump the version** even though it contains breaking changes relative to the
-  initial scaffold (§14): no payload was ever persisted or exchanged under the scaffold, so
-  `"0.1"` is still the first and only published form. This is flagged for reviewer confirmation
-  in §17.
+* **v0.1 → v0.2 (owner-approved 2026-11-22, change C6)** removes `OverlayDisplayMode`,
+  `OverlayUpdate.display_mode` and `GameProfile.overlay_display_mode` and adds `Trigger`,
+  `OverlayPlacement`, `OverlayStyle`, `batch_id` and `trigger`. No payload was ever persisted or
+  exchanged under `0.1`, so no migration function is provided (§14).
 
 ## 14. Backward compatibility and migration
 
@@ -819,6 +852,12 @@ references the contracts, and no persisted data exists, so no runtime migration 
 | `OverlayUpdate` | `str` display mode, no `created_at` | enum, + `created_at`, expiry ordering | OverlayMessage requirements |
 | `LifecycleEvent` | free `reason: str = ""` | `LifecycleReason` enum, transition graph validation, `error` | DialogueEvent requirements |
 | Config | `schema_version`, `extra=forbid` | unchanged | — |
+| `schema_version` | `"0.1"` | `"0.2"` | C6 |
+| `TranslationRequest` (v0.1→v0.2) | no origin information | + `trigger` (`auto` default), + `batch_id` (required iff `hotkey`) | C1: F8 batches |
+| `OverlayUpdate` (v0.1→v0.2) | `display_mode` required | `display_mode` removed, + optional `batch_id` | C2: Vietnamese-only overlay |
+| `GameProfile` (v0.1→v0.2) | `overlay_display_mode` enum | removed; + `overlay_style: OverlayStyle` | C3: per-game placement and style |
+| `OverlayDisplayMode` (v0.1→v0.2) | 4 values | enum deleted; + `OverlayPlacement`, `Trigger` | `bilingual`, `side_by_side`, `floating_box` out of scope |
+| ROI, `LifecycleReason` (v0.1→v0.2) | — | unchanged (C4, C5) | F8 bypasses the state machine |
 
 Compatibility names: `OCRResult`, `DialogueEvent`, `OverlayMessage` are aliases of the canonical
 classes. Existing class names were all retained, so imports from `ai_screen_translator.contracts`
@@ -853,11 +892,17 @@ policy, SQLite schemas, persistence code, and any capture/OCR/translation/overla
 3. **Overlay clear message.** Clearing is derived from `LifecycleEvent(CLEARED)`. Decide in M1/M3
    whether an explicit `OverlayClear` contract is also needed.
 4. **Lifecycle `reason` ↔ transition pairing** is not enforced (only each vocabulary separately).
-5. **Version bump.** Whether the scaffold→current breaking changes should bump to `0.2` (not done;
-   see §13).
+5. **Version bump.** Resolved: the contract set moved to `0.2` (C6, §13).
 6. **Idempotency key format** is opaque; the recommended format is advisory.
 7. **Subtitle identity for overlapping regions** is a tracker (M3) concern, not specified here.
 8. **Translation memory as an engine value** is an addition not present in the scaffold; confirm
    the naming.
 9. **Text length limit** (8192) and list bounds (history 32, glossary 256/1024, ROI 32) are
    defensive defaults chosen here, not benchmarked.
+10. **F8 overlay lifetime and clearing.** `expires_at` is required, so a default lifetime is
+    needed, and "clear all results of one F8" has no trigger yet. The contract supports removal
+    by `batch_id`; the policy is an open owner question (DECISIONS.md Q1).
+11. **Settings contract.** Rebindable hotkeys need a settings contract that does not exist in
+    v0.2 (DECISIONS.md Q2).
+12. **`OverlayStyle` defaults and bounds** (24 px, 0.85 opacity, offsets ±4096, font 8–128 px,
+    opacity ≥ 0.1) are working values chosen here, not UX-tested.
