@@ -26,3 +26,9 @@ logs/
 secrets/
 *.pem
 *.key
+
+# Windows validation outputs (may contain machine details or private screen content)
+windows_test_results/
+W2_sample_*.png
+W8_*.csv
+.venv-w/
