@@ -33,6 +33,16 @@ INSTRUCTIONS = (
 )
 
 
+def is_timeout_or_connection_error(exc: BaseException, openai_module) -> bool:
+    """True only for the SDK's timeout/connection errors (APITimeoutError subclasses the latter)."""
+    return isinstance(exc, openai_module.APIConnectionError)
+
+
+def is_auth_error(exc: BaseException, openai_module) -> bool:
+    """True only for an HTTP 401 from the API; a network failure must not count as 'auth works'."""
+    return isinstance(exc, openai_module.AuthenticationError)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--model", default=os.environ.get("OPENAI_MODEL"))
@@ -59,6 +69,20 @@ def main() -> int:
     rec.measure("openai_sdk_version", getattr(openai, "__version__", None))
 
     client = OpenAI(timeout=args.timeout, max_retries=0)
+
+    # Model availability in THIS account (master prompt: check, do not assume).
+    try:
+        client.models.retrieve(args.model)
+        rec.check("model is available to this API key (models.retrieve)", True, args.model)
+    except openai.NotFoundError:
+        rec.check("model is available to this API key (models.retrieve)", False, "404 not found")
+    except Exception as exc:  # noqa: BLE001
+        rec.check(
+            "model is available to this API key (models.retrieve)",
+            None,
+            f"could not tell: {type(exc).__name__}: {redact(str(exc))[:150]}",
+        )
+
     latencies: list[float] = []
     translations: dict[str, str] = {}
     usage: list[dict[str, int | None]] = []
@@ -99,32 +123,32 @@ def main() -> int:
 
     # (2) timeout path
     tiny = OpenAI(timeout=0.001, max_retries=0)
-    caught = None
+    caught: BaseException | None = None
     start = time.perf_counter()
     try:
         tiny.responses.create(model=args.model, input="ping", max_output_tokens=16)
     except Exception as exc:  # noqa: BLE001
-        caught = type(exc).__name__
+        caught = exc
     rec.measure("timeout_path_ms", round((time.perf_counter() - start) * 1000))
     rec.check(
-        "tiny timeout raises a catchable error (does not hang or crash)",
-        caught is not None,
-        str(caught),
+        "tiny timeout raises the SDK timeout/connection error (does not hang or crash)",
+        caught is not None and is_timeout_or_connection_error(caught, openai),
+        type(caught).__name__ if caught is not None else "no exception was raised",
     )
 
     # (3) auth failure path: a fake key made up for this test, not a credential
     bad = OpenAI(
         api_key="invalid-key-for-w5-auth-failure-test", timeout=args.timeout, max_retries=0
     )
-    auth_error = None
+    auth_error: BaseException | None = None
     try:
         bad.responses.create(model=args.model, input="ping", max_output_tokens=16)
     except Exception as exc:  # noqa: BLE001
-        auth_error = type(exc).__name__
+        auth_error = exc
     rec.check(
-        "invalid key raises an authentication error",
-        auth_error is not None,
-        str(auth_error),
+        "invalid key raises AuthenticationError (HTTP 401), not some other failure",
+        auth_error is not None and is_auth_error(auth_error, openai),
+        type(auth_error).__name__ if auth_error is not None else "no exception was raised",
     )
     rec.note(
         "Owner: read the printed translations yourself; no quality score is computed. Record the "

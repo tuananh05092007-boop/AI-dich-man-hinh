@@ -444,6 +444,20 @@ def main() -> int:
             rec.measure(f"manual_{key}", {"y": True, "n": False}.get(answer))
     else:
         rec.note("Manual questionnaire skipped; record the five observations by hand.")
+    rec.extra["hotkey_status"] = {
+        "specified_in_decisions": list(HOTKEYS),
+        "registered_by_this_test_script_only": [
+            n for n, info in thread.registration.items() if info["registered"]
+        ],
+        "wired_to_an_action_in_this_script": ["F7 (toggle overlay visibility)", "Ctrl+Alt+E"],
+        "implemented_in_product_code": [],
+    }
+    rec.note(
+        "Hotkey status: F6/F7/F8/F9 and Ctrl+Alt+E are SPECIFIED (DECISIONS.md). This script "
+        "only registers them to measure OS behaviour; F6, F8 and F9 trigger no action here and "
+        "no product code registers any hotkey yet. Registration working here is not an "
+        "implemented feature."
+    )
     rec.note(
         "Ctrl+Alt+E is only confirmed once registration succeeded AND the owner finds no "
         "clash in games."

@@ -8,9 +8,15 @@ written for this test (no game assets). For a more meaningful result pass ``--di
 screenshots: for each ``name.png`` put the exact expected text in ``name.txt`` next to it. Keep
 private screenshots out of the repository.
 
-The exact PP-OCRv6 *small* model names are NOT confirmed (see DECISIONS.md / MILESTONE-0). The
-defaults below follow the naming pattern and are a guess; override with ``--det-model`` and
-``--rec-model`` and record which names actually load. A failed load is a finding, not a script bug.
+Model identifiers (checked 2026-11-23): the official PaddlePaddle Hugging Face collection
+``pp-ocrv6`` publishes the repositories ``PP-OCRv6_small_det`` and ``PP-OCRv6_small_rec`` (plus
+tiny and medium variants). That confirms the identifiers exist. It does NOT yet confirm that the
+installed PaddleOCR 3.x release accepts them as ``text_detection_model_name`` and
+``text_recognition_model_name`` (the PaddleOCR page documents those arguments with the *medium*
+names only). The check "PaddleOCR loads with the requested small models" settles it on the target
+machine. If the load fails, override with ``--det-model`` / ``--rec-model``, record the pair that
+works and treat the failure as a finding, not a script bug. ``PaddleOCR()`` with no model names uses
+*medium*, so the small names must always be passed explicitly (as this script does).
 
 CER and latency are *recorded*, not graded: no accuracy or latency budget has been approved yet.
 The checks only assert that the model loaded and produced non-empty text.
@@ -114,8 +120,8 @@ def texts_from_result(result) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--dir", type=Path, help="folder of name.png + name.txt pairs")
-    parser.add_argument("--det-model", default="PP-OCRv6_small_det", help="UNVERIFIED default")
-    parser.add_argument("--rec-model", default="PP-OCRv6_small_rec", help="UNVERIFIED default")
+    parser.add_argument("--det-model", default="PP-OCRv6_small_det", help="see module docstring")
+    parser.add_argument("--rec-model", default="PP-OCRv6_small_rec", help="see module docstring")
     parser.add_argument("--cpu-threads", type=int, default=None)
     parser.add_argument("--runs", type=int, default=3, help="timed passes over all samples")
     parser.add_argument("--synthetic-count", type=int, default=12)

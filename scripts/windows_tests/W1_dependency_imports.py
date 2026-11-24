@@ -70,6 +70,14 @@ def main() -> int:
         rec.check(f"import {module_name}", True, f"{rows[module_name]['version']} ({elapsed} ms)")
     rec.extra["imports"] = rows
 
+    paddleocr_version = (rows.get("paddleocr") or {}).get("version")
+    if paddleocr_version:
+        rec.check(
+            "PaddleOCR is a 3.x release (approved stack)",
+            str(paddleocr_version).split(".")[0] == "3",
+            str(paddleocr_version),
+        )
+
     paddle = loaded.get("paddle")
     if paddle is not None:
         try:
@@ -105,6 +113,8 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001
             rec.check("PySide6 QtCore import", False, f"{type(exc).__name__}: {exc}")
 
+    if sys.version_info[:2] != (3, 11):
+        rec.check("interpreter is Python 3.11 (project target)", False, sys.version.split()[0])
     rec.note(
         "Pins are NOT decided here. M0-09 pins versions only after W2-W8 pass on this machine."
     )

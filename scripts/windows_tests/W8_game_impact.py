@@ -38,7 +38,7 @@ import threading
 import time
 from pathlib import Path
 
-from _common import Recorder, percentile, rss_mb, stats
+from _common import Recorder, percentile, require_windows, rss_mb, stats
 
 FRAME_TIME_COLUMNS = ("MsBetweenPresents", "msBetweenPresents", "FrameTime", "frametime")
 SAMPLE_SENTENCES = ("You should not have come here.", "The gate is sealed.")
@@ -176,6 +176,8 @@ def run_load(args: argparse.Namespace, rec: Recorder, stop_at: float) -> dict[st
 def cmd_run(args: argparse.Namespace) -> int:
     rec = Recorder("W8", f"Game impact - resource sampling [{args.scenario}]")
     print(f"W8 run - scenario {args.scenario}, {args.seconds:.0f} s")
+    if not require_windows(rec):
+        return rec.finish()
     rec.measure("scenario", args.scenario)
     rec.measure("fps_target", args.fps)
     rec.measure("roi", args.roi)
@@ -208,6 +210,11 @@ def cmd_run(args: argparse.Namespace) -> int:
         rec.measure(key, summary, unit)
     rec.check(
         "GPU/VRAM were sampled (nvidia-smi)", column_stats(sampler.rows, "gpu_percent") is not None
+    )
+    rec.check(
+        "FPS impact on the game is acceptable",
+        None,
+        "not decided here: needs PresentMon CSVs ('analyze') and the owner's judgement",
     )
     rec.note(
         "GPU and VRAM here are for the WHOLE system, including the game. Compare against the "
@@ -260,6 +267,11 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         rec.measure(name, comparisons[name])
         rec.check(f"{name} has frames", summary.get("frames", 0) > 0)
     rec.extra["comparisons"] = comparisons
+    rec.check(
+        "FPS impact on the game is acceptable",
+        None,
+        "no FPS budget is approved; the owner judges the numbers against baseline variance",
+    )
     rec.note(
         "No FPS budget is approved, so no verdict is computed. Judge the change against the "
         "natural run-to-run variance of two baseline runs. 1% low matters more than the average."
@@ -283,8 +295,8 @@ def main() -> int:
     run.add_argument("--monitor", type=int, default=0)
     run.add_argument("--roi", help="left,top,right,bottom")
     run.add_argument("--cpu-threads", type=int, default=None)
-    run.add_argument("--det-model", default="PP-OCRv6_small_det", help="UNVERIFIED default")
-    run.add_argument("--rec-model", default="PP-OCRv6_small_rec", help="UNVERIFIED default")
+    run.add_argument("--det-model", default="PP-OCRv6_small_det", help="see W3 docstring")
+    run.add_argument("--rec-model", default="PP-OCRv6_small_rec", help="see W3 docstring")
     run.add_argument("--nllb-model", default="facebook/nllb-200-distilled-600M")
     run.set_defaults(func=cmd_run)
 

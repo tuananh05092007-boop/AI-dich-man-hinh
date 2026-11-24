@@ -1,9 +1,22 @@
 # Kiểm thử thực tế trên Windows (W0–W8)
 
 **Trạng thái: các script đã viết nhưng CHƯA được chạy trên Windows.** Chưa có kết quả nào từ máy đích.
-Script chỉ ghi nhận số liệu và quan sát; không script nào tự tuyên bố "đạt" cho thứ nó không đo được
-(mục không đo được ghi `N/A` và làm kết quả chung thành `PARTIAL`, không bao giờ là `PASS`).
-Chạy trên hệ điều hành khác Windows chỉ là *dry run* và báo cáo sẽ ghi rõ `executed_on_target: false`.
+Hướng dẫn từng bước cho người chạy: [`docs/WINDOWS_VALIDATION_GUIDE.md`](../../docs/WINDOWS_VALIDATION_GUIDE.md).
+
+## Các trạng thái kết quả
+
+| Trạng thái | Ý nghĩa |
+|---|---|
+| `PASS` | Chạy **trên Windows**, mọi check đều chạy và đạt |
+| `PARTIAL` | Chạy trên Windows, không check nào trượt, nhưng có check `N/A` (cần quan sát tay / chưa đo được). **Không** tính là PASS |
+| `FAIL` | Chạy trên Windows, ít nhất một check trượt |
+| `SKIP` | Không thể thực hiện (thiếu key, không phải Windows…); lý do nằm trong báo cáo |
+| `DRY_RUN_PASS/PARTIAL/FAIL` | Chạy ở hệ điều hành khác Windows. **Không phải bằng chứng** cho máy đích (`executed_on_target: false`) |
+| `NOT_RUN` | Không có báo cáo nào (do `summarize_results.py` suy ra; không script nào tự ghi) |
+
+Script không bao giờ đánh dấu `PASS` chỉ vì chạy xong không lỗi: mỗi check là `True`/`False`/`None`.
+Mỗi bài in một dòng `RESULT Wx: <trạng thái>` và ghi JSON vào `windows_test_results\`. Lệnh
+`summarize_results.py` gộp tất cả thành một bảng và `SUMMARY.json`.
 
 ## 1. Chuẩn bị (một lần)
 
@@ -33,7 +46,7 @@ Chạy mọi lệnh từ thư mục gốc của repo. Báo cáo JSON nằm ở `
 | W4 | NLLB-200 600M CPU: RAM, độ trễ, dịch EN→VI | `& $py scripts\windows_tests\W4_nllb.py` | ~2,4 GB tải về |
 | W5 | OpenAI Responses API | `$env:OPENAI_API_KEY="..."; $env:OPENAI_MODEL="<model>"; & $py scripts\windows_tests\W5_openai.py` | key + tên model |
 | W6 | Overlay click-through, chế độ chỉnh sửa, hotkey | `& $py scripts\windows_tests\W6_overlay_hotkeys.py` | PySide6; làm theo các bước trong docstring |
-| W7 | Hàng đợi giới hạn, timeout, guard (mô phỏng) | `& $py scripts\windows_tests\W7_queue_timeout.py` | — |
+| W7 | Hàng đợi giới hạn, timeout, guard (mô phỏng; tối đa `PARTIAL`, không bao giờ `PASS`) | `& $py scripts\windows_tests\W7_queue_timeout.py` | — |
 | W8 | Tác động lên game: tài nguyên + FPS | xem bên dưới | game, PresentMon |
 
 ### Lưu ý riêng từng bài
@@ -41,20 +54,23 @@ Chạy mọi lệnh từ thư mục gốc của repo. Báo cáo JSON nằm ở `
   (`--label game-borderless`), và game Fullscreen Exclusive (`--label game-exclusive`). Exclusive **không** được
   mặc định là hoạt động; nếu ra khung đen hoặc không có khung, đó là kết quả cần ghi lại. Màn hình thứ hai:
   thêm `--monitor 1`.
-* **W3:** tên model PP-OCRv6 *small* mặc định (`PP-OCRv6_small_det/rec`) là **suy đoán theo quy tắc đặt tên,
-  chưa xác nhận**. Nếu nạp lỗi, tra tên đúng trong tài liệu chính thức rồi truyền `--det-model/--rec-model` và
-  ghi lại cặp tên chạy được. Để kết quả có ý nghĩa hơn, dùng ảnh chụp game thật: `--dir thu_muc` với mỗi
+* **W3:** tên `PP-OCRv6_small_det` / `PP-OCRv6_small_rec` **có trong collection chính thức** của PaddlePaddle
+  trên Hugging Face (kiểm tra 2026-11-24). Việc bản PaddleOCR 3.x đã cài **nhận** hai tên này hay không chỉ biết
+  khi chạy check `PaddleOCR loads with the requested small models` trên Windows. Nếu nạp lỗi, truyền
+  `--det-model/--rec-model` khác và ghi lại cặp tên chạy được. Để kết quả có ý nghĩa hơn, dùng ảnh chụp game thật: `--dir thu_muc` với mỗi
   `ten.png` kèm `ten.txt` chứa đúng nội dung chữ. **Đừng commit ảnh riêng tư.** CER và độ trễ chỉ được ghi,
   chưa chấm đạt/trượt vì chưa có ngưỡng được duyệt.
 * **W4:** bản dịch cần bạn tự đọc (được lưu trong báo cáo). Script không chấm chất lượng.
 * **W5:** key chỉ đọc từ biến môi trường, không bao giờ in ra hay ghi vào báo cáo. Model là cấu hình, không có
-  mặc định (M0-08 cần tài liệu API hiện hành và bạn duyệt).
+  mặc định (M0-08 cần tài liệu API hiện hành và bạn duyệt). Bài này kiểm tra model có dùng được với key của bạn
+  (`models.retrieve`), timeout phải ra lỗi timeout/kết nối, key sai phải ra `AuthenticationError` (401).
 * **W6:** chạy hai lần: mặc định (`--method win32`) và `--method qt` để so sánh hai cách bật/tắt click-through.
   Thêm `--idle-seconds 5` để thử nhanh cơ chế tự thoát, rồi chạy một lần với 60 s thật. Bài này kiểm tra:
   F6/F7/F8/F9 và Ctrl+Alt+E có đăng ký được không (lỗi 1409 = phím đã bị chương trình khác giữ), phím có tới
   được game hay không, click xuyên qua overlay, kéo thả ở chế độ chỉnh sửa, bộ đếm 60 s tính từ lần tương
   tác cuối, không tự thoát khi đang kéo, thoát xong phải click-through trở lại, overlay còn topmost không.
-  Cuối bài có 5 câu hỏi quan sát tay.
+  Cuối bài có 5 câu hỏi quan sát tay. **Hotkey mới chỉ được đặc tả**: bài này đăng ký chúng để đo hành vi
+  của hệ điều hành; F6/F8/F9 không kích hoạt hành động nào, và code sản phẩm chưa đăng ký hotkey nào.
 * **W8:** hai bước.
   1. Với mỗi kịch bản (`baseline` lặp ít nhất 2 lần, `capture`, `capture_ocr`, `capture_ocr_nllb`), bật
      PresentMon cho tiến trình game, rồi chạy
@@ -66,7 +82,11 @@ Chạy mọi lệnh từ thư mục gốc của repo. Báo cáo JSON nằm ở `
   kết luận đạt/trượt về FPS vì chưa có ngân sách được duyệt; bạn so với độ dao động giữa hai lần baseline.
   Chi phí của chính overlay không được tạo ra ở đây; hãy mở overlay W6 song song để đo riêng.
 
-## 3. Gửi lại kết quả
+## 3. Gộp kết quả và gửi lại
+
+```powershell
+& $py scripts\windows_tests\summarize_results.py
+```
 
 Dán cho mình phần cuối `RESULT Wx: ...` của mỗi bài, hoặc gửi file JSON. Báo cáo chứa thông tin máy (CPU,
 GPU, phiên bản gói) nhưng không chứa key; hãy xem qua trước khi chia sẻ, nhất là nếu dùng `--save-sample`
@@ -77,6 +97,7 @@ Windows" khi có báo cáo thật từ máy của bạn.
 
 * Không có ngưỡng chất lượng/độ trễ/FPS nào được duyệt, nên các con số chỉ là dữ liệu.
 * W3 dùng ảnh tổng hợp theo mặc định, dễ hơn khung hình game thật.
-* W7 là mô phỏng khái niệm (chạy được ngoài Windows), không phải kiểm thử code sản phẩm.
+* W7 là mô phỏng khái niệm (chạy được ngoài Windows), không phải kiểm thử code sản phẩm; chưa có pipeline
+  thật nên W7 không thể đạt `PASS`.
 * Chưa kiểm tra: mất thiết bị DXGI sau alt-tab/đổi độ phân giải, thay đổi DPI giữa chừng, nhiều GPU, chạy
   nhiều giờ liên tục.

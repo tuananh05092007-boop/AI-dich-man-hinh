@@ -2,9 +2,10 @@
 
     uv run python scripts/windows_tests/W0_env_snapshot.py
 
-Records facts only. The few checks are objective (Python >= 3.11, Windows, a monitor exists).
-Whether the machine matches the target (Ryzen 7 8745H, 16 GB, RTX 4050 6 GB) is for the owner to
-confirm from the report, so no check pretends to decide it.
+Records facts, then compares them with the documented target (Windows 11, Python 3.11,
+Ryzen 7 8745H, 16 GB RAM, RTX 4050 Laptop 6 GB). A comparison that cannot be read from the machine
+is N/A (never PASS). Every command it runs is read-only (``powershell Get-CimInstance``,
+``nvidia-smi --query-gpu``, ``powercfg /getactivescheme``, ``uv --version``).
 """
 
 import ctypes
@@ -15,6 +16,7 @@ import shutil
 import subprocess
 import sys
 from ctypes import wintypes
+from pathlib import Path
 
 from _common import IS_WINDOWS, Recorder
 
@@ -146,7 +148,7 @@ def main() -> int:
     print("W0 - environment snapshot")
 
     rec.measure("python", sys.version.replace("\n", " "))
-    rec.measure("python_executable", sys.executable)
+    rec.measure("python_executable", sys.executable.replace(str(Path.home()), "~"))
     rec.measure("platform", platform.platform())
     rec.measure("machine", platform.machine())
     rec.measure("processor_string", platform.processor())
@@ -178,8 +180,31 @@ def main() -> int:
     mons = monitors()
     rec.measure("monitors", mons)
 
-    rec.check("python >= 3.11", sys.version_info >= (3, 11), sys.version.split()[0])
+    rec.check(
+        "python is 3.11.x (project target; paddle/torch wheels are validated for it)",
+        sys.version_info[:2] == (3, 11),
+        sys.version.split()[0],
+    )
     rec.check("running on Windows", IS_WINDOWS, platform.system())
+    if IS_WINDOWS:
+        build = sys.getwindowsversion().build
+        rec.check("Windows 11 (build >= 22000)", build >= 22000, f"build {build}")
+    cpu_text = cpu_name or ""
+    rec.check(
+        "CPU is the target Ryzen 7 8745H",
+        ("8745H" in cpu_text) if cpu_text else None,
+        cpu_text or "CPU name could not be read",
+    )
+    rec.check(
+        "RAM is about 16 GB (14-17 GiB usable)",
+        (14.0 <= ram <= 17.0) if ram else None,
+        f"{ram:.2f} GiB" if ram else "RAM could not be read",
+    )
+    rec.check(
+        "GPU is the target RTX 4050 Laptop",
+        ("4050" in gpu) if gpu else None,
+        gpu or "nvidia-smi unavailable",
+    )
     rec.check("at least one monitor reported", bool(mons) if IS_WINDOWS else None)
     rec.check("nvidia-smi available (GPU/VRAM sampling for W8)", bool(smi) if IS_WINDOWS else None)
 
@@ -188,7 +213,10 @@ def main() -> int:
         "Game Mode on/off, Hardware-accelerated GPU scheduling on/off, laptop plugged in or on "
         "battery, GPU mode (hybrid/discrete), and which monitor the game runs on."
     )
-    rec.note("Compare cpu_name / ram_total / gpu_nvidia_smi with the target machine by eye.")
+    rec.note(
+        "If a target-hardware check fails, the machine is not the documented target and the "
+        "later results are not evidence for it. Tell the architect before running W2-W8."
+    )
     return rec.finish()
 
 

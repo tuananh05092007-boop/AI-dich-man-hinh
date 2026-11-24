@@ -19,7 +19,9 @@ Scenarios
     discarded; the overlap rule (overlap coefficient >= 0.5) behaves as documented (provisional).
  E. Worker exception: a crashing worker becomes a structured ``ErrorInfo`` and the loop continues.
 
-Results on a non-Windows host are a dry run, not evidence for the target machine.
+Results on a non-Windows host are a dry run, not evidence for the target machine. Checks that only
+exercise a helper or illustrate a filter are N/A, and a final N/A check records that no real
+pipeline exists yet, so W7 reports PARTIAL (DRY_RUN_PARTIAL off-Windows) at best, never PASS.
 """
 
 import argparse
@@ -39,7 +41,6 @@ try:  # the contracts are installed with the project (uv sync)
         ErrorCode,
         ErrorInfo,
         PipelineComponent,
-        SkipReason,
         TranslationEngine,
         TranslationRequest,
         TranslationResult,
@@ -260,9 +261,9 @@ def scenario_c(rec: Recorder) -> None:
         "C a result for a different subtitle is rejected",
         not make_result("subtitle_2", 2).is_current(*gen2_active),
     )
-    rec.check(
-        "C stale results map to skip_reason stale_generation",
-        SkipReason.STALE_GENERATION.value == "stale_generation",
+    rec.note(
+        "C: SkipReason.STALE_GENERATION exists in the contracts, but nothing here proves a real "
+        "pipeline emits it; that needs the real implementation."
     )
 
 
@@ -278,13 +279,15 @@ def scenario_d(rec: Recorder) -> None:
     late_old = [r for r in batch_a if r.batch_id != active]
     accepted_new = [r for r in batch_b if r.batch_id == active]
     rec.check(
-        "D late results of the superseded batch are discarded (illustration only)",
-        len(late_old) == 3 and len(accepted_new) == 2,
+        "D late results of the superseded batch are discarded",
+        None,
+        "illustration of a list filter on contract fields; not evidence about real code "
+        f"(filter kept {len(accepted_new)} new, dropped {len(late_old)} old)",
     )
     rec.note(
         "D: the batch check only illustrates the filter 'batch_id == active batch' on contract "
         "fields. It is NOT evidence about real code; the real test belongs with the F8 "
-        "implementation. The overlap-rule checks below do exercise the provisional P-01 rule."
+        "implementation."
     )
 
     def box(x1, y1, x2, y2, monitor="DISPLAY1"):
@@ -293,18 +296,20 @@ def scenario_d(rec: Recorder) -> None:
     big, inside = box(0, 0, 1000, 100), box(100, 10, 400, 60)
     far, partial = box(0, 500, 1000, 600), box(900, 0, 1100, 100)
     other_monitor = box(100, 10, 400, 60, monitor="DISPLAY2")
-    rec.check(
-        "D overlap: a block inside the ROI overlaps fully (coefficient 1.0)",
-        overlap_coefficient(big, inside) == 1.0,
+    # These exercise overlap_coefficient() defined in THIS script (a helper), so a pass says the
+    # provisional P-01 formula is self-consistent, not that any product code implements it.
+    # They are therefore N/A for the purpose of the overall status.
+    helper_ok = (
+        overlap_coefficient(big, inside) == 1.0
+        and overlap_coefficient(big, far) == 0.0
+        and overlap_coefficient(big, partial) == 0.5
+        and overlap_coefficient(big, other_monitor) == 0.0
     )
-    rec.check("D overlap: disjoint boxes do not overlap", overlap_coefficient(big, far) == 0.0)
+    rec.measure("D_script_helper_overlap_formula_self_consistent", helper_ok)
     rec.check(
-        "D overlap: a 50% overlap counts as the same position (>= 0.5)",
-        overlap_coefficient(big, partial) == 0.5,
-    )
-    rec.check(
-        "D overlap: boxes on different monitors never overlap",
-        overlap_coefficient(big, other_monitor) == 0.0,
+        "D overlap rule (provisional P-01) implemented in product code",
+        None,
+        f"only the script's own helper was exercised (self-consistent: {helper_ok})",
     )
 
 
@@ -355,6 +360,11 @@ def main() -> int:
     scenario_c(rec)
     scenario_d(rec)
     scenario_e(rec)
+    rec.check(
+        "the real pipeline (queues, workers, guards in product code) behaves correctly",
+        None,
+        "not testable yet: no pipeline code exists before M1; W7 reaches PARTIAL at best",
+    )
     rec.note(
         "Simulation of the concepts only. Real queue sizes, drop policies and threading model "
         "are decided and benchmarked during implementation (Milestone 6)."

@@ -8,7 +8,10 @@ Design rules (owner rules 6 and 7):
   observation, or that could not be evaluated, are ``None`` and make the overall status
   ``PARTIAL`` (never ``PASS``).
 * Every report states whether it was produced on Windows. A run on any other OS is labelled
-  ``executed_on_target = false`` and is a dry run, not evidence for the Windows machine.
+  ``executed_on_target = false``, its status is ``DRY_RUN_PASS``/``DRY_RUN_PARTIAL``/
+  ``DRY_RUN_FAIL`` (never plain ``PASS``/``FAIL``) and it is not evidence for the Windows machine.
+* ``NOT_RUN`` is not written by any test: it is what ``summarize_results.py`` reports for a test
+  that has no report from Windows at all.
 * Secrets are redacted before anything is printed or written. API keys are read from environment
   variables only and are never logged.
 """
@@ -183,12 +186,25 @@ class Recorder:
             return "PARTIAL"
         return "PASS"
 
-    def finish(self) -> int:
+    def reported_status(self) -> str:
+        """The status printed in ``RESULT`` and stored in the report.
+
+        On Windows it equals :meth:`status`. Elsewhere a would-be ``PASS``/``PARTIAL`` becomes
+        ``DRY_RUN_PASS``/``DRY_RUN_PARTIAL``/``DRY_RUN_FAIL`` so that a Linux run can never be
+        mistaken for evidence (good or bad) about the target machine. ``SKIP`` keeps its meaning.
+        """
         status = self.status()
+        if not IS_WINDOWS and status in ("PASS", "PARTIAL", "FAIL"):
+            return f"DRY_RUN_{status}"
+        return status
+
+    def finish(self) -> int:
+        status = self.reported_status()
         report = {
             "test_id": self.test_id,
             "title": self.title,
             "status": status,
+            "check_status": self.status(),
             "skip_reason": self.skip_reason,
             "executed_on_target": IS_WINDOWS,
             "started_utc": self.started.isoformat(),
@@ -215,7 +231,7 @@ class Recorder:
         if self.skip_reason:
             print(f"  skipped: {self.skip_reason}")
         print(f"RESULT {self.test_id}: {status}  (report: {path})")
-        return 1 if status == "FAIL" else 0
+        return 1 if self.status() == "FAIL" else 0
 
 
 class Stopwatch:
