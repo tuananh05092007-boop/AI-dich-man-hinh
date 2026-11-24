@@ -29,15 +29,15 @@ Establish approved architecture, shared contracts, source layout, dependency str
 
 | ID | Script | Linux dry run | Windows run |
 |---|---|---|---|
-| W0 | W0_env_snapshot.py | ran (reports Linux; "running on Windows" check fails by design) | **Not run** |
-| W1 | W1_dependency_imports.py | not run | **Not run** |
-| W2 | W2_dxgi_capture.py | skips off-Windows | **Not run** |
-| W3 | W3_ocr_ppocr.py | stopped at missing `paddleocr`, as expected | **Not run** |
-| W4 | W4_nllb.py | stopped at missing `torch`, as expected | **Not run** |
-| W5 | W5_openai.py | skips without a key | **Not run** |
-| W6 | W6_overlay_hotkeys.py | skips off-Windows; syntax and lint only | **Not run** |
-| W7 | W7_queue_timeout.py | ran: 20 of 20 checks passed (simulation) | **Not run** |
-| W8 | W8_game_impact.py | `analyze` and `run --scenario baseline` ran on synthetic data | **Not run** |
+| W0 | W0_env_snapshot.py | ran: `DRY_RUN_FAIL` (Linux; target-machine checks fail by design) | **Not run** |
+| W1 | W1_dependency_imports.py | ran: `DRY_RUN_FAIL` (packages not installed on Linux, as expected) | **Not run** |
+| W2 | W2_dxgi_capture.py | `SKIP` off-Windows | **Not run** |
+| W3 | W3_ocr_ppocr.py | `DRY_RUN_FAIL`: stopped at missing packages, as expected; small model names exist in the official HF collection but loading is unverified | **Not run** |
+| W4 | W4_nllb.py | `DRY_RUN_FAIL`: stopped at missing `torch`, as expected | **Not run** |
+| W5 | W5_openai.py | `SKIP` without a key | **Not run** |
+| W6 | W6_overlay_hotkeys.py | `SKIP` off-Windows; syntax and lint only | **Not run** |
+| W7 | W7_queue_timeout.py | ran: `DRY_RUN_PARTIAL` (simulation; helper-only checks are N/A, no real pipeline exists) | **Not run** |
+| W8 | W8_game_impact.py | `run` is `SKIP` off-Windows; `analyze` ran on synthetic data | **Not run** |
 
 A Linux dry run is not evidence for the target machine. See `scripts/windows_tests/README.md`.
 
